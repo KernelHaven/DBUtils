@@ -6,6 +6,7 @@ import java.io.IOException;
 import org.junit.Assert;
 import org.junit.Test;
 
+import net.ssehub.kernel_haven.AllTests;
 import net.ssehub.kernel_haven.util.io.ITableCollection;
 import net.ssehub.kernel_haven.util.io.ITableReader;
 import net.ssehub.kernel_haven.util.io.ITableWriter;
@@ -65,7 +66,7 @@ public class SqLiteCollectionTest {
     @Test
     public void testWriteAndRead() {
         // Delete generated file at the beginning of the rtest to allow debugging of the DB.
-        File tmpFile = new File("tempFile.db");
+        File tmpFile = new File(AllTests.TESTDATA, "tempFile.db");
         if (tmpFile.exists()) {
             tmpFile.delete();
         }
