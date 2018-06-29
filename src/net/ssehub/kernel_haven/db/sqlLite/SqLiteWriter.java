@@ -129,6 +129,7 @@ public class SqLiteWriter extends AbstractTableWriter {
                 break;
             default:
                 result.append(columnName.charAt(i));
+                break;
             }
         }
         

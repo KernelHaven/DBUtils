@@ -45,7 +45,7 @@ public class SqLiteCollectionTest {
          * First column.
          * @return First column.
          */
-        @TableElement(index=1,name="name")
+        @TableElement(index = 1, name = "name")
         public String getName() {
             return name;
         }
@@ -54,7 +54,7 @@ public class SqLiteCollectionTest {
          * Second column.
          * @return Second column.
          */
-        @TableElement(index=2,name="value")
+        @TableElement(index = 2, name = "value")
         public String getValue() {
             return value;
         }
