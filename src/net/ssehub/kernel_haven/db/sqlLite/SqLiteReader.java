@@ -14,6 +14,11 @@ import net.ssehub.kernel_haven.util.io.ITableReader;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;
 import net.ssehub.kernel_haven.util.null_checks.Nullable;
 
+/**
+ * Reads a table from a SQLite database.
+ * @author El-Sharkawy
+ *
+ */
 public class SqLiteReader implements ITableReader {
     
     private static final Logger LOGGER = Logger.get();

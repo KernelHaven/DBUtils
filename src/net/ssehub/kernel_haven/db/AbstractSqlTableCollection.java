@@ -24,7 +24,7 @@ public abstract class AbstractSqlTableCollection implements ITableCollection {
     
     /**
      * Sole constructor.
-     * @param The connection for the collection (used to retrieve meta-information).
+     * @param con The connection for the collection (used to retrieve meta-information).
      * Each writer/reader should use its own connection.
      */
     protected AbstractSqlTableCollection(Connection con) {
@@ -42,15 +42,15 @@ public abstract class AbstractSqlTableCollection implements ITableCollection {
         @NonNull Set<@NonNull String> tables = new HashSet<>();
         
         if (null != con) {
-        try {
-            DatabaseMetaData md = con.getMetaData();
-            ResultSet rs = md.getTables(null, null, "%", null);
-            while (rs.next()) {
-                tables.add(rs.getString(3));
+            try {
+                DatabaseMetaData md = con.getMetaData();
+                ResultSet rs = md.getTables(null, null, "%", null);
+                while (rs.next()) {
+                    tables.add(rs.getString(3));
+                }
+            } catch (SQLException exc) {
+                LOGGER.logException("Could not determine tables names for: " + getTableName(), exc);
             }
-        } catch (SQLException exc) {
-            LOGGER.logException("Could not determine tables names for: " + getTableName(), exc);
-        }
         } else {
             LOGGER.logWarning("Could not determine table names, since database connection closed for db: ",
                 getTableName());
