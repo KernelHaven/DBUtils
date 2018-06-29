@@ -106,25 +106,25 @@ public class SqLiteWriter extends AbstractTableWriter {
                 break;
             
             // Escape German umlauts
-            case 'ä':
+            case 'Ã¤':
                 result.append("ae");
                 break;
-            case 'Ä':
+            case 'Ã„':
                 result.append("Ae");
                 break;
-            case 'ö':
+            case 'Ã¶':
                 result.append("oe");
                 break;
-            case 'Ö':
+            case 'Ã–':
                 result.append("Oe");
                 break;
-            case 'ü':
+            case 'Ã¼':
                 result.append("ue");
                 break;
-            case 'Ü':
+            case 'Ãœ':
                 result.append("Ue");
                 break;
-            case 'ß':
+            case 'ÃŸ':
                 result.append("ss");
                 break;
             default:
