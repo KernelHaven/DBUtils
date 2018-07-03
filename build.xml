@@ -2,7 +2,7 @@
 
 <!-- author: Sascha El-Sharkawy -->
 <project name="DBUtils" default="jenkins" basedir=".">
-	<description>Utilities for reading and writing Excel workbooks</description>
+	<description>Utilities for reading and writing SQL tables</description>
 
 	<!-- Load Marcros on Jenkins -->
 	<include file="../../KernelHaven_Infrastructure/workspace/KernelHavenMacros.xml" as="KH_Common" optional="true" />
