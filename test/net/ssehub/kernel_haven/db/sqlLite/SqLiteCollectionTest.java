@@ -65,8 +65,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testWriteAndRead() {
-        // Delete generated file at the beginning of the rtest to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "tempFile.db");
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "tempFile.sqlite");
         if (tmpFile.exists()) {
             tmpFile.delete();
         }
@@ -105,6 +105,72 @@ public class SqLiteCollectionTest {
                     e.printStackTrace();
                 }
             }
+        }
+    }
+    
+    /**
+     * A test data class.
+     */
+    @TableRow(isRelation = true)
+    public static class RelationData {
+        
+        private String feature;
+        
+        private String dependsOn;
+
+        /**
+         * Creates this object.
+         * @param feature Value 1.
+         * @param dependsOn Value 2.
+         */
+        public RelationData(String feature, String dependsOn) {
+            this.feature = feature;
+            this.dependsOn = dependsOn;
+        }
+
+        /**
+         * Value 1.
+         * 
+         * @return Value 1.
+         */
+        @TableElement(index = 1, name = "Feature")
+        public String getFeature() {
+            return feature;
+        }
+        
+        /**
+         * Value 2.
+         * 
+         * @return Value 2.
+         */
+        @TableElement(index = 2, name = "Depends On")
+        public String getDependsOn() {
+            return dependsOn;
+        }
+        
+    }
+    
+    /**
+     * Tests writing of a relation structure.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testRelationStructure() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "tempFile.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter writer = collection.getWriter("Feature Dependencies")) {
+                writer.writeObject(new RelationData("A", "B"));
+                writer.writeObject(new RelationData("A", "C"));
+                writer.writeObject(new RelationData("B", "C"));
+            }
+            
         }
     }
 

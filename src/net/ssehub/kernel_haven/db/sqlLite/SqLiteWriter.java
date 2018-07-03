@@ -7,6 +7,7 @@ import java.sql.SQLException;
 
 import net.ssehub.kernel_haven.util.Logger;
 import net.ssehub.kernel_haven.util.io.AbstractTableWriter;
+import net.ssehub.kernel_haven.util.io.TableRowMetadata;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;
 import net.ssehub.kernel_haven.util.null_checks.Nullable;
 
@@ -23,9 +24,13 @@ public class SqLiteWriter extends AbstractTableWriter {
     private String dbName;
     private String tableName;
     
-    // Writing
+    // Normal writing
     private PreparedStatement sqlInsertStatement;
     private String sqlInsertQuery;
+    
+    // relation writing
+    private PreparedStatement sqlInsertStatement1;
+    private PreparedStatement sqlInsertStatement2;
     
     /**
      * Sole constructor.
@@ -167,4 +172,151 @@ public class SqLiteWriter extends AbstractTableWriter {
     private String getTableName() {
         return tableName + " in " + dbName;
     }
+    
+    @Override
+    protected void writeAnnotationHeader(@NonNull TableRowMetadata metadata) throws IOException {
+        if (!metadata.isRelation()) {
+            // normal handling for non-relations
+            super.writeAnnotationHeader(metadata);
+            return;
+        }
+        
+        // special handling for relations
+        // create two tables: one ID content mapping, and one relation mapping (ID, ID)
+        String elementTableName = sqlifyColumnName(tableName) + "_Elements";
+        
+        StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
+        sqlCreate.append(elementTableName);
+        sqlCreate.append(" (");
+        sqlCreate.append("ID INTEGER PRIMARY KEY");
+        
+        /*
+         * Avoid illegal table names
+         * Column names cannot be prepared: https://stackoverflow.com/a/27041304
+         */
+        sqlCreate.append(", ");
+        String columnName = sqlifyColumnName(tableName + "_Element");
+        sqlCreate.append(columnName);
+        sqlCreate.append(" TEXT,");
+        sqlCreate.append(" UNIQUE(");
+        sqlCreate.append(columnName);
+        sqlCreate.append(")");
+        
+        sqlCreate.append(");");
+        
+        try {
+            PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
+            sqlStatement.execute();
+        } catch (SQLException exc) {
+            throw new IOException("Could not create element table", exc);
+        }
+        
+        @NonNull Object[] headers = metadata.getHeaders();
+        if (headers.length != 2) {
+            throw new IllegalArgumentException("Relation TableRows must have exactly 2 TableElements");
+        }
+        
+        sqlCreate = new StringBuffer("CREATE TABLE ");
+        sqlCreate.append(sqlifyColumnName(tableName));
+        sqlCreate.append(" (");
+        
+        sqlCreate.append(sqlifyColumnName(headers[0].toString()));
+        sqlCreate.append(" INTEGER,");
+        
+        sqlCreate.append(sqlifyColumnName(headers[1].toString()));
+        sqlCreate.append(" INTEGER,");
+        
+        sqlCreate.append(" FOREIGN KEY(");
+        sqlCreate.append(sqlifyColumnName(headers[0].toString()));
+        sqlCreate.append(") REFERENCES ");
+        sqlCreate.append(elementTableName);
+        sqlCreate.append(" (ID),");
+        
+        sqlCreate.append(" FOREIGN KEY(");
+        sqlCreate.append(sqlifyColumnName(headers[1].toString()));
+        sqlCreate.append(") REFERENCES ");
+        sqlCreate.append(elementTableName);
+        sqlCreate.append("s (ID)");
+        
+        sqlCreate.append(");");
+        
+        try {
+            PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
+            sqlStatement.execute();
+        } catch (SQLException exc) {
+            throw new IOException("Could not create relation table", exc);
+        }
+        
+        StringBuffer sqlInsert1 = new StringBuffer();
+        sqlInsert1.append("INSERT OR IGNORE INTO ");
+        sqlInsert1.append(elementTableName);
+        sqlInsert1.append(" VALUES (NULL, ?); ");
+        
+        StringBuffer sqlInsert2 = new StringBuffer();
+        sqlInsert2.append("INSERT INTO ");
+        sqlInsert2.append(sqlifyColumnName(tableName));
+        sqlInsert2.append(" VALUES (");
+        
+        sqlInsert2.append("(SELECT ID FROM ");
+        sqlInsert2.append(elementTableName);
+        sqlInsert2.append(" WHERE ");
+        sqlInsert2.append(columnName);
+        sqlInsert2.append(" = ?), ");
+        
+        sqlInsert2.append("(SELECT ID FROM ");
+        sqlInsert2.append(elementTableName);
+        sqlInsert2.append(" WHERE ");
+        sqlInsert2.append(columnName);
+        sqlInsert2.append(" = ?)");
+        
+        sqlInsert2.append(");");
+        
+        try {
+            sqlInsertStatement1 = con.prepareStatement(sqlInsert1.toString());
+            sqlInsertStatement2 = con.prepareStatement(sqlInsert2.toString());
+        } catch (SQLException exc) {
+            throw new IOException("Could not prepare insert statement", exc);
+        }
+    }
+    
+    @Override
+    protected void writeAnnotationObject(@NonNull TableRowMetadata metadata, @NonNull Object object)
+            throws IOException, IllegalArgumentException {
+        if (!metadata.isRelation()) {
+            // normal handling for non-relations
+            super.writeAnnotationObject(metadata, object);
+            return;
+        }
+        
+        if (!metadata.isSameClass(object)) {
+            throw new IllegalArgumentException("Incompatible type of row passed to writeRow(): "
+                    + object.getClass().getName());
+        }
+        
+        // special handling for relations
+        
+        try {
+            Object[] values = metadata.getContent(object);
+            
+            String[] strings = {
+                    values[0] != null ? values[0].toString() : "",
+                            values[1] != null ? values[1].toString() : ""
+            };
+            
+            sqlInsertStatement1.setString(1, strings[0]);
+            sqlInsertStatement1.execute();
+            sqlInsertStatement1.setString(1, strings[1]);
+            sqlInsertStatement1.execute();
+            
+            sqlInsertStatement2.setString(1, strings[0]);
+            sqlInsertStatement2.setString(2, strings[1]);
+            sqlInsertStatement2.execute();
+            
+        } catch (ReflectiveOperationException e) {
+            throw new IOException(e);
+        } catch (SQLException e) {
+            throw new IOException(e);
+        }
+    }
+
 }
