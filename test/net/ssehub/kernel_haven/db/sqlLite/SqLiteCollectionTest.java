@@ -66,7 +66,7 @@ public class SqLiteCollectionTest {
     @Test
     public void testWriteAndRead() {
         // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "tempFile.sqlite");
+        File tmpFile = new File(AllTests.TESTDATA, "testWriteAndRead.sqlite");
         if (tmpFile.exists()) {
             tmpFile.delete();
         }
@@ -158,7 +158,7 @@ public class SqLiteCollectionTest {
     @Test
     public void testRelationStructure() throws IOException {
         // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "tempFile.sqlite");
+        File tmpFile = new File(AllTests.TESTDATA, "testRelationStructure.sqlite");
         if (tmpFile.exists()) {
             tmpFile.delete();
         }

@@ -183,69 +183,17 @@ public class SqLiteWriter extends AbstractTableWriter {
         
         // special handling for relations
         // create two tables: one ID content mapping, and one relation mapping (ID, ID)
-        String elementTableName = sqlifyColumnName(tableName) + "_Elements";
-        
-        StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
-        sqlCreate.append(elementTableName);
-        sqlCreate.append(" (");
-        sqlCreate.append("ID INTEGER PRIMARY KEY");
-        
-        /*
-         * Avoid illegal table names
-         * Column names cannot be prepared: https://stackoverflow.com/a/27041304
-         */
-        sqlCreate.append(", ");
-        String columnName = sqlifyColumnName(tableName + "_Element");
-        sqlCreate.append(columnName);
-        sqlCreate.append(" TEXT,");
-        sqlCreate.append(" UNIQUE(");
-        sqlCreate.append(columnName);
-        sqlCreate.append(")");
-        
-        sqlCreate.append(");");
-        
-        try {
-            PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
-            sqlStatement.execute();
-        } catch (SQLException exc) {
-            throw new IOException("Could not create element table", exc);
-        }
+        String elementTableName = sqlifyColumnName(tableName + "_Elements");
+        String columnName = createElementsTable(elementTableName);
         
         @NonNull Object[] headers = metadata.getHeaders();
         if (headers.length != 2) {
             throw new IllegalArgumentException("Relation TableRows must have exactly 2 TableElements");
         }
+        createRelationTable(elementTableName, headers);
         
-        sqlCreate = new StringBuffer("CREATE TABLE ");
-        sqlCreate.append(sqlifyColumnName(tableName));
-        sqlCreate.append(" (");
-        
-        sqlCreate.append(sqlifyColumnName(headers[0].toString()));
-        sqlCreate.append(" INTEGER,");
-        
-        sqlCreate.append(sqlifyColumnName(headers[1].toString()));
-        sqlCreate.append(" INTEGER,");
-        
-        sqlCreate.append(" FOREIGN KEY(");
-        sqlCreate.append(sqlifyColumnName(headers[0].toString()));
-        sqlCreate.append(") REFERENCES ");
-        sqlCreate.append(elementTableName);
-        sqlCreate.append(" (ID),");
-        
-        sqlCreate.append(" FOREIGN KEY(");
-        sqlCreate.append(sqlifyColumnName(headers[1].toString()));
-        sqlCreate.append(") REFERENCES ");
-        sqlCreate.append(elementTableName);
-        sqlCreate.append("s (ID)");
-        
-        sqlCreate.append(");");
-        
-        try {
-            PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
-            sqlStatement.execute();
-        } catch (SQLException exc) {
-            throw new IOException("Could not create relation table", exc);
-        }
+        // Create view combining the two tables
+        createView(elementTableName, columnName, headers);
         
         StringBuffer sqlInsert1 = new StringBuffer();
         sqlInsert1.append("INSERT OR IGNORE INTO ");
@@ -277,6 +225,140 @@ public class SqLiteWriter extends AbstractTableWriter {
         } catch (SQLException exc) {
             throw new IOException("Could not prepare insert statement", exc);
         }
+    }
+
+    /**
+     * Part of {@link #writeAnnotationHeader(TableRowMetadata)}: Creates a view combining both tables.
+     * @param elementTableName The name of the first table, which is used to reference elements as foreign key.
+     * @param columnName The key column of the first table
+     * @param headers A 2-dim array containing the names of the relationships.
+     * @throws IOException If the view could not be created.
+     */
+    private void createView(String elementTableName, String columnName, Object[] headers) throws IOException {
+        // As we join two times the same table, we have to rename columns (and cann't join in one step)
+        // Inner select statement
+        StringBuffer innerSelect = new StringBuffer("SELECT ");
+        innerSelect.append(columnName);
+        innerSelect.append(" AS ");
+        innerSelect.append(sqlifyColumnName(headers[0].toString()));
+        innerSelect.append(", ");
+        innerSelect.append(sqlifyColumnName(headers[1].toString()));
+        innerSelect.append(" FROM ");
+        innerSelect.append(sqlifyColumnName(tableName));
+        innerSelect.append(" JOIN ");
+        innerSelect.append(elementTableName);
+        innerSelect.append(" ON ");
+        innerSelect.append(sqlifyColumnName(tableName));
+        innerSelect.append(".");
+        innerSelect.append(sqlifyColumnName(headers[0].toString()));
+        innerSelect.append(" = ");
+        innerSelect.append(elementTableName);
+        innerSelect.append(".ID");
+        
+        // Outer select statement
+        StringBuffer outerSelect = new StringBuffer("SELECT ");
+        outerSelect.append(sqlifyColumnName(headers[0].toString()));
+        outerSelect.append(", ");
+        outerSelect.append(columnName);
+        outerSelect.append(" AS ");
+        outerSelect.append(sqlifyColumnName(headers[1].toString()));
+        outerSelect.append(" FROM (");
+        outerSelect.append(innerSelect);
+        outerSelect.append(") AS INNER_JOIN JOIN ");
+        outerSelect.append(elementTableName);
+        outerSelect.append(" ON INNER_JOIN");
+        outerSelect.append(".");
+        outerSelect.append(sqlifyColumnName(headers[1].toString()));
+        outerSelect.append(" = ");
+        outerSelect.append(elementTableName);
+        outerSelect.append(".ID");
+        
+        StringBuffer sqlCreateView = new StringBuffer("CREATE VIEW IF NOT EXISTS ");
+        sqlCreateView.append(sqlifyColumnName(tableName + "_View"));
+        sqlCreateView.append(" AS ");
+        sqlCreateView.append(outerSelect);
+        try {
+            PreparedStatement sqlStatement = con.prepareStatement(sqlCreateView.toString());
+            sqlStatement.execute();
+        } catch (SQLException exc) {
+            throw new IOException("Could not create view", exc);
+        }
+    }
+
+    /**
+     * Part of {@link #writeAnnotationHeader(TableRowMetadata)}: Writes 2nd table, containing the relations between
+     * elements of the first table (see {@link #createElementsTable(String)}).
+     * @param elementTableName The name of the first table, which is used to reference elements as foreign key.
+     * @param headers A 2-dim array containing the names of the relationships.
+     * @throws IOException If the table could not be created.
+     */
+    private void createRelationTable(String elementTableName, Object[] headers) throws IOException {
+        StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
+        sqlCreate.append(sqlifyColumnName(tableName));
+        sqlCreate.append(" (");
+        
+        sqlCreate.append(sqlifyColumnName(headers[0].toString()));
+        sqlCreate.append(" INTEGER,");
+        
+        sqlCreate.append(sqlifyColumnName(headers[1].toString()));
+        sqlCreate.append(" INTEGER,");
+        
+        sqlCreate.append(" FOREIGN KEY(");
+        sqlCreate.append(sqlifyColumnName(headers[0].toString()));
+        sqlCreate.append(") REFERENCES ");
+        sqlCreate.append(elementTableName);
+        sqlCreate.append(" (ID),");
+        
+        sqlCreate.append(" FOREIGN KEY(");
+        sqlCreate.append(sqlifyColumnName(headers[1].toString()));
+        sqlCreate.append(") REFERENCES ");
+        sqlCreate.append(elementTableName);
+        sqlCreate.append("s (ID)");
+        
+        sqlCreate.append(");");
+        
+        try {
+            PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
+            sqlStatement.execute();
+        } catch (SQLException exc) {
+            throw new IOException("Could not create relation table", exc);
+        }
+    }
+
+    /**
+     * Part of {@link #writeAnnotationHeader(TableRowMetadata)}: Writes first table, containing the primary elements.
+     * @param elementTableName The name of the table to create.
+     * @return The column name of the primary key elements.
+     * @throws IOException If the table could not be created.
+     */
+    private String createElementsTable(String elementTableName) throws IOException {
+        StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
+        sqlCreate.append(elementTableName);
+        sqlCreate.append(" (");
+        sqlCreate.append("ID INTEGER PRIMARY KEY");
+        
+        /*
+         * Avoid illegal table names
+         * Column names cannot be prepared: https://stackoverflow.com/a/27041304
+         */
+        sqlCreate.append(", ");
+        String columnName = sqlifyColumnName(tableName + "_Element");
+        sqlCreate.append(columnName);
+        sqlCreate.append(" TEXT,");
+        sqlCreate.append(" UNIQUE(");
+        sqlCreate.append(columnName);
+        sqlCreate.append(")");
+        
+        sqlCreate.append(");");
+        
+        try {
+            PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
+            sqlStatement.execute();
+        } catch (SQLException exc) {
+            throw new IOException("Could not create element table", exc);
+        }
+        
+        return columnName;
     }
     
     @Override
