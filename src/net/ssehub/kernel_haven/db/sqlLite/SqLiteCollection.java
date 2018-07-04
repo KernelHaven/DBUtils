@@ -12,6 +12,8 @@ import net.ssehub.kernel_haven.db.AbstractSqlTableCollection;
 import net.ssehub.kernel_haven.util.io.ITableCollection;
 import net.ssehub.kernel_haven.util.io.ITableReader;
 import net.ssehub.kernel_haven.util.io.ITableWriter;
+import net.ssehub.kernel_haven.util.io.TableCollectionReaderFactory;
+import net.ssehub.kernel_haven.util.io.TableCollectionWriterFactory;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;
 import net.ssehub.kernel_haven.util.null_checks.Nullable;
 
@@ -21,6 +23,16 @@ import net.ssehub.kernel_haven.util.null_checks.Nullable;
  *
  */
 public class SqLiteCollection extends AbstractSqlTableCollection {
+    
+    static {
+        // this static block is invoked by the infrastructure, see loadClasses.txt
+        
+        // register to TableCollectionReaderFactory
+        TableCollectionReaderFactory.INSTANCE.registerHandler("sqlite", SqLiteCollection.class);
+        
+        // register to TableCollectionWriterFactory
+        TableCollectionWriterFactory.INSTANCE.registerHandler("sqlite", SqLiteCollection.class);
+    }
     
     private @NonNull File dbFile;
     
