@@ -5,7 +5,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-import net.ssehub.kernel_haven.util.Logger;
 import net.ssehub.kernel_haven.util.io.AbstractTableWriter;
 import net.ssehub.kernel_haven.util.io.TableRowMetadata;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;
@@ -17,8 +16,6 @@ import net.ssehub.kernel_haven.util.null_checks.Nullable;
  *
  */
 public class SqLiteWriter extends AbstractTableWriter {
-    
-    private static final Logger LOGGER = Logger.get();
     
     private Connection con;
     private String dbName;
@@ -51,7 +48,7 @@ public class SqLiteWriter extends AbstractTableWriter {
                 con.close();
             }
         } catch (SQLException exc) {
-            LOGGER.logException("Could not close connection for: " + getTableName(), exc);
+            throw new IOException("Could not close connection for: " + getTableName(), exc);
         }
     }
     
@@ -92,7 +89,7 @@ public class SqLiteWriter extends AbstractTableWriter {
                 sqlInsertQuery = sqlInsert.toString();
                 sqlInsertStatement = con.prepareStatement(sqlInsertQuery);
             } catch (SQLException exc) {
-                LOGGER.logException("Could not prepare SQL queries.", exc);
+                throw new IOException("Could not prepare SQL queries", exc);
             }
         }
     }
