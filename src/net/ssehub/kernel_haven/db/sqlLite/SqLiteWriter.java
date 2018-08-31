@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+import net.ssehub.kernel_haven.util.Logger;
 import net.ssehub.kernel_haven.util.io.AbstractTableWriter;
 import net.ssehub.kernel_haven.util.io.TableRowMetadata;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;
@@ -37,6 +38,12 @@ public class SqLiteWriter extends AbstractTableWriter {
      */
     SqLiteWriter(Connection con, String dbName, String tableName) {
         this.con = con;
+        try {
+            con.setAutoCommit(false);
+        } catch (SQLException e) {
+            Logger.get().logWarning2("Could not disable auto commit mode for SQL DB \"",  dbName,
+                "\", DB will oparate in a slower mode.");
+        }
         this.dbName = dbName;
         this.tableName = tableName;
     }
@@ -45,6 +52,9 @@ public class SqLiteWriter extends AbstractTableWriter {
     public void close() throws IOException {
         try {
             if (con != null) {
+                if (!con.isClosed()) {
+                    con.commit();
+                }
                 con.close();
             }
         } catch (SQLException exc) {
