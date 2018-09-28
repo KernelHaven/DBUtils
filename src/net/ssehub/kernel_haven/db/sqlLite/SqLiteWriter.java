@@ -105,17 +105,20 @@ public class SqLiteWriter extends AbstractTableWriter {
     
     /**
      * Avoids illegal column names, not supported by SQL.
+     * 
      * @param columnName The name to verify its correct name.
+     * 
      * @return A legal name based on the provided instance, this will be a new instance in any case.
      */
     private @NonNull String sqlifyColumnName(@NonNull String columnName) {
-        StringBuffer result = new StringBuffer(columnName.length());
-        for (int i = 0; i < columnName.length(); i++) {
-            char character = columnName.charAt(i);
+        StringBuffer result = new StringBuffer(columnName);
+        for (int i = 0; i < result.length(); i++) {
+            char character = result.charAt(i);
             boolean smallChar = (character >= 'A' && character <= 'Z');
             boolean bigChar = (character >= 'a' && character <= 'z');
-            if (smallChar || bigChar) {
-                character = '_';                
+            boolean number = (character >= '0' && character <= '9') && i != 0; // number only allowed after first pos
+            if (!smallChar && !bigChar && !number) {
+                result.setCharAt(i, '_');
             }
         }
         
