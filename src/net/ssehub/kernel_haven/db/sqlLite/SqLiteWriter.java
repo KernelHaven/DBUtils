@@ -82,7 +82,7 @@ public class SqLiteWriter extends AbstractTableWriter {
                  * Column names cannot be prepared: https://stackoverflow.com/a/27041304
                  */
                 sqlCreate.append(", ");
-                String columnName = tableName + "_" + fields[i].toString();
+                String columnName = sqlifyColumnName(tableName + "_" + fields[i].toString());
                 sqlCreate.append(columnName);
                 sqlCreate.append(" TEXT");
                 
@@ -111,36 +111,11 @@ public class SqLiteWriter extends AbstractTableWriter {
     private @NonNull String sqlifyColumnName(@NonNull String columnName) {
         StringBuffer result = new StringBuffer(columnName.length());
         for (int i = 0; i < columnName.length(); i++) {
-            switch (columnName.charAt(i)) {
-            case ' ':
-                result.append('_');
-                break;
-            
-            // Escape German umlauts
-            case 'ä':
-                result.append("ae");
-                break;
-            case 'Ä':
-                result.append("Ae");
-                break;
-            case 'ö':
-                result.append("oe");
-                break;
-            case 'Ö':
-                result.append("Oe");
-                break;
-            case 'ü':
-                result.append("ue");
-                break;
-            case 'Ü':
-                result.append("Ue");
-                break;
-            case 'ß':
-                result.append("ss");
-                break;
-            default:
-                result.append(columnName.charAt(i));
-                break;
+            char character = columnName.charAt(i);
+            boolean smallChar = (character >= 'A' && character <= 'Z');
+            boolean bigChar = (character >= 'a' && character <= 'z');
+            if (smallChar || bigChar) {
+                character = '_';                
             }
         }
         
