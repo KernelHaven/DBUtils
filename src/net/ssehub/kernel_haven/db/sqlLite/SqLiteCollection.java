@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
 
+import net.ssehub.kernel_haven.config.Configuration;
 import net.ssehub.kernel_haven.db.AbstractSqlTableCollection;
 import net.ssehub.kernel_haven.util.io.ITableCollection;
 import net.ssehub.kernel_haven.util.io.ITableReader;
@@ -95,6 +96,15 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
     @Override
     protected @NonNull String getTableName() {
         return dbFile.getAbsolutePath();
+    }
+    
+    /**
+     * Initialization method called by KernelHaven. See loadClasses.txt
+     * 
+     * @param config The global pipeline configuration.
+     */
+    public static void initialize(@NonNull Configuration config) {
+        // everything already done in the static block
     }
 
 }
