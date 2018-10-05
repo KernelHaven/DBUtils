@@ -111,7 +111,7 @@ public class SqLiteWriter extends AbstractTableWriter {
      * @return A legal name based on the provided instance, this will be a new instance in any case.
      */
     private @NonNull String sqlifyColumnName(@NonNull String columnName) {
-        StringBuffer result = new StringBuffer(columnName);
+        StringBuilder result = new StringBuilder(columnName);
         for (int i = 0; i < result.length(); i++) {
             char character = result.charAt(i);
             boolean smallChar = (character >= 'A' && character <= 'Z');
