@@ -41,7 +41,7 @@ public class SqLiteReader implements ITableReader {
     SqLiteReader(Connection con, String dbName, String tableName) {
         this.con = con;
         this.dbName = dbName;
-        this.tableName = tableName;
+        this.tableName = sqlifyColumnName(tableName);
         determineRelevantColumns();
         loadData();
     }
@@ -145,4 +145,25 @@ public class SqLiteReader implements ITableReader {
         return tableName + " in " + dbName;
     }
 
+    /**
+     * Avoids illegal column names, not supported by SQL.
+     * 
+     * @param columnName The name to verify its correct name.
+     * 
+     * @return A legal name based on the provided instance, this will be a new instance in any case.
+     */
+    private @NonNull String sqlifyColumnName(@NonNull String columnName) {
+        StringBuilder result = new StringBuilder(columnName);
+        for (int i = 0; i < result.length(); i++) {
+            char character = result.charAt(i);
+            boolean smallChar = (character >= 'A' && character <= 'Z');
+            boolean bigChar = (character >= 'a' && character <= 'z');
+            boolean number = (character >= '0' && character <= '9') && i != 0; // number only allowed after first pos
+            if (!smallChar && !bigChar && !number) {
+                result.setCharAt(i, '_');
+            }
+        }
+        
+        return result.toString();
+    }
 }

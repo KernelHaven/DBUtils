@@ -44,7 +44,7 @@ public class SqLiteWriter extends AbstractTableWriter {
 //                "\", DB will operate in a slower mode.");
 //        }
         this.dbName = dbName;
-        this.tableName = tableName;
+        this.tableName = sqlifyColumnName(tableName);
     }
 
     @Override
