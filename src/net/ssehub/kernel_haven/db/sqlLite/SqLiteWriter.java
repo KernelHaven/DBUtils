@@ -171,8 +171,8 @@ public class SqLiteWriter extends AbstractTableWriter {
         String columnName = createElementsTable(elementTableName);
         
         @NonNull Object[] headers = metadata.getHeaders();
-        if (headers.length != 2) {
-            throw new IllegalArgumentException("Relation TableRows must have exactly 2 TableElements");
+        if (headers.length < 2) {
+            throw new IllegalArgumentException("Relation TableRows must have at least 2 TableElements");
         }
         createRelationTable(elementTableName, headers);
         
@@ -201,6 +201,10 @@ public class SqLiteWriter extends AbstractTableWriter {
         sqlInsert2.append(columnName);
         sqlInsert2.append(" = ?)");
         
+        for (int i = 2; i < headers.length; i++) {
+            sqlInsert2.append(", ?");
+        }
+        
         sqlInsert2.append(");");
         
         try {
@@ -215,18 +219,18 @@ public class SqLiteWriter extends AbstractTableWriter {
      * Part of {@link #writeAnnotationHeader(TableRowMetadata)}: Creates a view combining both tables.
      * @param elementTableName The name of the first table, which is used to reference elements as foreign key.
      * @param columnName The key column of the first table
-     * @param headers A 2-dim array containing the names of the relationships.
+     * @param headers A at least 2-dim array containing the names of the relationships.
      * @throws IOException If the view could not be created.
      */
     private void createView(String elementTableName, String columnName, Object[] headers) throws IOException {
-        // As we join two times the same table, we have to rename columns (and cann't join in one step)
+        // As we join two times the same table, we have to rename columns (and can't join in one step)
         // Inner select statement
         StringBuffer innerSelect = new StringBuffer("SELECT ");
         innerSelect.append(columnName);
         innerSelect.append(" AS ");
-        innerSelect.append(sqlifyColumnName(headers[0].toString()));
+        innerSelect.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
         innerSelect.append(", ");
-        innerSelect.append(sqlifyColumnName(headers[1].toString()));
+        innerSelect.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
         innerSelect.append(" FROM ");
         innerSelect.append(sqlifyColumnName(tableName));
         innerSelect.append(" JOIN ");
@@ -234,25 +238,25 @@ public class SqLiteWriter extends AbstractTableWriter {
         innerSelect.append(" ON ");
         innerSelect.append(sqlifyColumnName(tableName));
         innerSelect.append(".");
-        innerSelect.append(sqlifyColumnName(headers[0].toString()));
+        innerSelect.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
         innerSelect.append(" = ");
         innerSelect.append(elementTableName);
         innerSelect.append(".ID");
         
         // Outer select statement
         StringBuffer outerSelect = new StringBuffer("SELECT ");
-        outerSelect.append(sqlifyColumnName(headers[0].toString()));
+        outerSelect.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
         outerSelect.append(", ");
         outerSelect.append(columnName);
         outerSelect.append(" AS ");
-        outerSelect.append(sqlifyColumnName(headers[1].toString()));
+        outerSelect.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
         outerSelect.append(" FROM (");
         outerSelect.append(innerSelect);
         outerSelect.append(") AS INNER_JOIN JOIN ");
         outerSelect.append(elementTableName);
         outerSelect.append(" ON INNER_JOIN");
         outerSelect.append(".");
-        outerSelect.append(sqlifyColumnName(headers[1].toString()));
+        outerSelect.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
         outerSelect.append(" = ");
         outerSelect.append(elementTableName);
         outerSelect.append(".ID");
@@ -273,7 +277,7 @@ public class SqLiteWriter extends AbstractTableWriter {
      * Part of {@link #writeAnnotationHeader(TableRowMetadata)}: Writes 2nd table, containing the relations between
      * elements of the first table (see {@link #createElementsTable(String)}).
      * @param elementTableName The name of the first table, which is used to reference elements as foreign key.
-     * @param headers A 2-dim array containing the names of the relationships.
+     * @param headers A at least 2-dim array containing the names of the relationships.
      * @throws IOException If the table could not be created.
      */
     private void createRelationTable(String elementTableName, Object[] headers) throws IOException {
@@ -281,20 +285,26 @@ public class SqLiteWriter extends AbstractTableWriter {
         sqlCreate.append(sqlifyColumnName(tableName));
         sqlCreate.append(" (");
         
-        sqlCreate.append(sqlifyColumnName(headers[0].toString()));
-        sqlCreate.append(" INTEGER,");
+        sqlCreate.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
+        sqlCreate.append(" INTEGER, ");
         
-        sqlCreate.append(sqlifyColumnName(headers[1].toString()));
-        sqlCreate.append(" INTEGER,");
+        sqlCreate.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
+        sqlCreate.append(" INTEGER, ");
+        
+        for (int i = 2; i < headers.length; i++) {
+            String columnName = sqlifyColumnName(tableName + "_" + headers[i].toString());
+            sqlCreate.append(columnName);
+            sqlCreate.append(" TEXT, ");
+        }
         
         sqlCreate.append(" FOREIGN KEY(");
-        sqlCreate.append(sqlifyColumnName(headers[0].toString()));
+        sqlCreate.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
         sqlCreate.append(") REFERENCES ");
         sqlCreate.append(elementTableName);
         sqlCreate.append(" (ID),");
         
         sqlCreate.append(" FOREIGN KEY(");
-        sqlCreate.append(sqlifyColumnName(headers[1].toString()));
+        sqlCreate.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
         sqlCreate.append(") REFERENCES ");
         sqlCreate.append(elementTableName);
         sqlCreate.append("s (ID)");
@@ -364,18 +374,19 @@ public class SqLiteWriter extends AbstractTableWriter {
         try {
             Object[] values = metadata.getContent(object);
             
-            String[] strings = {
-                    values[0] != null ? values[0].toString() : "",
-                            values[1] != null ? values[1].toString() : ""
-            };
+            String[] strings = new String[values.length];
+            for (int i = 0; i < values.length; i++) {
+                strings[i] = values[i] != null ? values[i].toString() : "";
+            }
             
             sqlInsertStatement1.setString(1, strings[0]);
             sqlInsertStatement1.execute();
             sqlInsertStatement1.setString(1, strings[1]);
             sqlInsertStatement1.execute();
             
-            sqlInsertStatement2.setString(1, strings[0]);
-            sqlInsertStatement2.setString(2, strings[1]);
+            for (int i = 0; i < strings.length; i++) {
+                sqlInsertStatement2.setString(i + 1, strings[i]);
+            }
             sqlInsertStatement2.execute();
             
         } catch (ReflectiveOperationException e) {

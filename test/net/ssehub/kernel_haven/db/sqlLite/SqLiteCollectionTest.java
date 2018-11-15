@@ -199,6 +199,63 @@ public class SqLiteCollectionTest {
     }
     
     /**
+     * A test data class.
+     */
+    @TableRow(isRelation = true)
+    public static class RelationDataWithExtraElement {
+        
+        private String feature;
+        
+        private String dependsOn;
+        
+        private String context;
+
+        /**
+         * Creates this object.
+         * 
+         * @param feature Value 1.
+         * @param dependsOn Value 2.
+         * @param context Value 3.
+         */
+        public RelationDataWithExtraElement(String feature, String dependsOn, String context) {
+            this.feature = feature;
+            this.dependsOn = dependsOn;
+            this.context = context;
+        }
+
+        /**
+         * Value 1.
+         * 
+         * @return Value 1.
+         */
+        @TableElement(index = 1, name = "Feature")
+        public String getFeature() {
+            return feature;
+        }
+        
+        /**
+         * Value 2.
+         * 
+         * @return Value 2.
+         */
+        @TableElement(index = 2, name = "Depends On")
+        public String getDependsOn() {
+            return dependsOn;
+        }
+        
+        /**
+         * Value 3.
+         * 
+         * @return Value 3.
+         */
+        @TableElement(index = 3, name = "Context")
+        public String getContext() {
+            return context;
+        }
+        
+    }
+    
+    /**
      * Tests writing of a relation structure.
      * 
      * @throws IOException unwanted.
@@ -219,6 +276,32 @@ public class SqLiteCollectionTest {
                 writer.writeObject(new RelationData("A", "B"));
                 writer.writeObject(new RelationData("A", "C"));
                 writer.writeObject(new RelationData("B", "C"));
+            }
+            
+        }
+    }
+    
+    /**
+     * Tests writing of a relation structure with extra data per relation.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testRelationStructureWithExtraElement() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testRelationStructureWithData.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        Assert.assertFalse("Test DB exist before test (but should be created during testing: "
+            + tmpFile.getAbsolutePath(), tmpFile.exists());
+        
+        try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter writer = collection.getWriter("Feature Dependencies")) {
+                writer.writeObject(new RelationDataWithExtraElement("A", "B", "Context 1"));
+                writer.writeObject(new RelationDataWithExtraElement("A", "C", "Context 2"));
+                writer.writeObject(new RelationDataWithExtraElement("B", "C", "Context 3"));
             }
             
         }
