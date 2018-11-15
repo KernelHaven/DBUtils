@@ -37,25 +37,30 @@ public class SqLiteWriter extends AbstractTableWriter {
      * @param con A connection, exclusively used by this writer.
      * @param dbName The name of the database (used in log messages only).
      * @param tableName The name of the table to be created inside the database.
+     * 
+     * @throws IOException If setting up the connection fails.
      */
-    SqLiteWriter(@NonNull Connection con, @NonNull String dbName, @NonNull String tableName) {
+    SqLiteWriter(@NonNull Connection con, @NonNull String dbName, @NonNull String tableName) throws IOException {
         this.con = con;
-//        try {
-//            con.setAutoCommit(false);
-//        } catch (SQLException e) {
-//            Logger.get().logWarning2("Could not disable auto commit mode for SQL DB \"",  dbName,
-//                "\", DB will operate in a slower mode.");
-//        }
         this.dbName = dbName;
         this.tableName = tableName;
+        
+        try {
+            // https://sqlite.org/pragma.html#pragma_foreign_keys
+            con.prepareStatement("PRAGMA foreign_keys = 1;").execute();
+            
+            // https://sqlite.org/pragma.html#pragma_synchronous
+            // setting this to OFF (= 0) increases write speed by more than 10 times
+            con.prepareStatement("PRAGMA synchronous = 0;").execute();
+            
+        } catch (SQLException e) {
+            throw new IOException("Could not set up connection for " + getTableName(), e);
+        }
     }
 
     @Override
     public void close() throws IOException {
         try {
-//            if (!con.isClosed()) {
-//                con.commit();
-//            }
             con.close();
         } catch (SQLException exc) {
             throw new IOException("Could not close connection for: " + getTableName(), exc);

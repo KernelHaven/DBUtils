@@ -44,7 +44,7 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
      * 
      * @param dbFile The file to be read/written.
      * 
-     * @throws IOException If the given databse file could not be opened.
+     * @throws IOException If the given database file could not be opened.
      */
     public SqLiteCollection(@NonNull File dbFile) throws IOException {
         super(createConnection(dbFile));
@@ -96,7 +96,7 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
 
     @Override
     protected @NonNull String getDbName() {
-        return dbFile.getAbsolutePath();
+        return dbFile.getPath();
     }
     
     /**
