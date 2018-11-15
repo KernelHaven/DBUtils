@@ -223,6 +223,17 @@ public class SqLiteWriter extends AbstractTableWriter {
      * @throws IOException If the view could not be created.
      */
     private void createView(String elementTableName, String columnName, Object[] headers) throws IOException {
+        // Handling of optional, non-relational elements starting at 3rd index of header
+        StringBuffer optionalColumns = null;
+        if (headers.length > 2) {
+            optionalColumns = new StringBuffer();
+            for (int i = 2; i < headers.length; i++) {
+                optionalColumns.append(", ");
+                optionalColumns.append(sqlifyColumnName(tableName + "_" + headers[i].toString()));
+            }
+        }
+        
+        
         // As we join two times the same table, we have to rename columns (and can't join in one step)
         // Inner select statement
         StringBuffer innerSelect = new StringBuffer("SELECT ");
@@ -231,6 +242,9 @@ public class SqLiteWriter extends AbstractTableWriter {
         innerSelect.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
         innerSelect.append(", ");
         innerSelect.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
+        if (null != optionalColumns) {
+            innerSelect.append(optionalColumns);
+        }
         innerSelect.append(" FROM ");
         innerSelect.append(sqlifyColumnName(tableName));
         innerSelect.append(" JOIN ");
@@ -250,6 +264,9 @@ public class SqLiteWriter extends AbstractTableWriter {
         outerSelect.append(columnName);
         outerSelect.append(" AS ");
         outerSelect.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
+        if (null != optionalColumns) {
+            outerSelect.append(optionalColumns);
+        }
         outerSelect.append(" FROM (");
         outerSelect.append(innerSelect);
         outerSelect.append(") AS INNER_JOIN JOIN ");

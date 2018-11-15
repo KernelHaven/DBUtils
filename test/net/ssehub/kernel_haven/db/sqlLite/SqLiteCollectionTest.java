@@ -289,7 +289,7 @@ public class SqLiteCollectionTest {
     @Test
     public void testRelationStructureWithExtraElement() throws IOException {
         // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testRelationStructureWithData.sqlite");
+        File tmpFile = new File(AllTests.TESTDATA, "testRelationStructureWithExtraElement.sqlite");
         if (tmpFile.exists()) {
             tmpFile.delete();
         }
