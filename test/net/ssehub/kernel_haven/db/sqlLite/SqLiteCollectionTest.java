@@ -281,6 +281,7 @@ public class SqLiteCollectionTest {
             // Test correct creation of view
             String[] expectedDependents = {"A", "A", "B"};
             String[] expectedDependentOns = {"B", "C", "C"};
+            
             try (ITableReader reader = collection.getReader("Feature Dependencies View")) {
                 String[][] content = reader.readFull();
                 Assert.assertEquals(3, content.length);
@@ -385,7 +386,7 @@ public class SqLiteCollectionTest {
                 }
             }
             // Contents of relation data (isRelation flag) can be retrieved from table_View
-            try (ITableReader reader = collection.getReader("Feature_Dependencies_View")) {
+            try (ITableReader reader = collection.getReader("Feature Dependencies View")) {
                 String[][] secondContent = reader.readFull();
                 Assert.assertEquals(3, secondContent.length);
                 for (int i = 0; i < secondContent.length; i++) {

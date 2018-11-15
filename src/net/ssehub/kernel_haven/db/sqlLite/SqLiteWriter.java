@@ -1,5 +1,7 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
+import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.sqlifyIdentifier;
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -11,15 +13,15 @@ import net.ssehub.kernel_haven.util.null_checks.NonNull;
 import net.ssehub.kernel_haven.util.null_checks.Nullable;
 
 /**
- * Writes elements into a (local) SQLite database.
+ * Writes to a table of a (local) SQLite database.
+ * 
  * @author El-Sharkawy
- *
  */
 public class SqLiteWriter extends AbstractTableWriter {
     
-    private Connection con;
-    private String dbName;
-    private String tableName;
+    private @NonNull Connection con;
+    private @NonNull String dbName;
+    private @NonNull String tableName;
     
     // Normal writing
     private PreparedStatement sqlInsertStatement;
@@ -30,12 +32,13 @@ public class SqLiteWriter extends AbstractTableWriter {
     private PreparedStatement sqlInsertStatement2;
     
     /**
-     * Sole constructor.
+     * Creates a writer for the given table.
+     * 
      * @param con A connection, exclusively used by this writer.
      * @param dbName The name of the database (used in log messages only).
      * @param tableName The name of the table to be created inside the database.
      */
-    SqLiteWriter(Connection con, String dbName, String tableName) {
+    SqLiteWriter(@NonNull Connection con, @NonNull String dbName, @NonNull String tableName) {
         this.con = con;
 //        try {
 //            con.setAutoCommit(false);
@@ -44,18 +47,16 @@ public class SqLiteWriter extends AbstractTableWriter {
 //                "\", DB will operate in a slower mode.");
 //        }
         this.dbName = dbName;
-        this.tableName = sqlifyColumnName(tableName);
+        this.tableName = tableName;
     }
 
     @Override
     public void close() throws IOException {
         try {
-            if (con != null) {
-//                if (!con.isClosed()) {
-//                    con.commit();
-//                }
-                con.close();
-            }
+//            if (!con.isClosed()) {
+//                con.commit();
+//            }
+            con.close();
         } catch (SQLException exc) {
             throw new IOException("Could not close connection for: " + getTableName(), exc);
         }
@@ -67,12 +68,12 @@ public class SqLiteWriter extends AbstractTableWriter {
         if (null != fields && fields.length > 0) {
             // Create the table containing the element definitions
             StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
-            sqlCreate.append(tableName);
+            sqlCreate.append(sqlifyIdentifier(tableName));
             sqlCreate.append(" (");
             sqlCreate.append("ID INTEGER PRIMARY KEY");
             
             StringBuffer sqlInsert = new StringBuffer("INSERT INTO ");
-            sqlInsert.append(tableName);
+            sqlInsert.append(sqlifyIdentifier(tableName));
             sqlInsert.append(" VALUES (");
             sqlInsert.append("NULL");
             
@@ -82,7 +83,7 @@ public class SqLiteWriter extends AbstractTableWriter {
                  * Column names cannot be prepared: https://stackoverflow.com/a/27041304
                  */
                 sqlCreate.append(", ");
-                String columnName = sqlifyColumnName(tableName + "_" + fields[i].toString());
+                String columnName = sqlifyIdentifier(fields[i].toString());
                 sqlCreate.append(columnName);
                 sqlCreate.append(" TEXT");
                 
@@ -101,28 +102,6 @@ public class SqLiteWriter extends AbstractTableWriter {
                 throw new IOException("Could not prepare SQL queries", exc);
             }
         }
-    }
-    
-    /**
-     * Avoids illegal column names, not supported by SQL.
-     * 
-     * @param columnName The name to verify its correct name.
-     * 
-     * @return A legal name based on the provided instance, this will be a new instance in any case.
-     */
-    private @NonNull String sqlifyColumnName(@NonNull String columnName) {
-        StringBuilder result = new StringBuilder(columnName);
-        for (int i = 0; i < result.length(); i++) {
-            char character = result.charAt(i);
-            boolean smallChar = (character >= 'A' && character <= 'Z');
-            boolean bigChar = (character >= 'a' && character <= 'z');
-            boolean number = (character >= '0' && character <= '9') && i != 0; // number only allowed after first pos
-            if (!smallChar && !bigChar && !number) {
-                result.setCharAt(i, '_');
-            }
-        }
-        
-        return result.toString();
     }
     
     @Override
@@ -151,6 +130,7 @@ public class SqLiteWriter extends AbstractTableWriter {
     
     /**
      * Returns the name of the database and the table for logging information.
+     * 
      * @return The name of the database and the table for logging information.
      */
     private String getTableName() {
@@ -167,7 +147,7 @@ public class SqLiteWriter extends AbstractTableWriter {
         
         // special handling for relations
         // create two tables: one ID content mapping, and one relation mapping (ID, ID)
-        String elementTableName = sqlifyColumnName(tableName + "_Elements");
+        String elementTableName = sqlifyIdentifier(tableName + " Elements");
         String columnName = createElementsTable(elementTableName);
         
         @NonNull Object[] headers = metadata.getHeaders();
@@ -186,7 +166,7 @@ public class SqLiteWriter extends AbstractTableWriter {
         
         StringBuffer sqlInsert2 = new StringBuffer();
         sqlInsert2.append("INSERT INTO ");
-        sqlInsert2.append(sqlifyColumnName(tableName));
+        sqlInsert2.append(sqlifyIdentifier(tableName));
         sqlInsert2.append(" VALUES (");
         
         sqlInsert2.append("(SELECT ID FROM ");
@@ -229,7 +209,7 @@ public class SqLiteWriter extends AbstractTableWriter {
             optionalColumns = new StringBuffer();
             for (int i = 2; i < headers.length; i++) {
                 optionalColumns.append(", ");
-                optionalColumns.append(sqlifyColumnName(tableName + "_" + headers[i].toString()));
+                optionalColumns.append(sqlifyIdentifier(headers[i].toString()));
             }
         }
         
@@ -239,31 +219,31 @@ public class SqLiteWriter extends AbstractTableWriter {
         StringBuffer innerSelect = new StringBuffer("SELECT ");
         innerSelect.append(columnName);
         innerSelect.append(" AS ");
-        innerSelect.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
+        innerSelect.append(sqlifyIdentifier(headers[0].toString()));
         innerSelect.append(", ");
-        innerSelect.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
+        innerSelect.append(sqlifyIdentifier(headers[1].toString()));
         if (null != optionalColumns) {
             innerSelect.append(optionalColumns);
         }
         innerSelect.append(" FROM ");
-        innerSelect.append(sqlifyColumnName(tableName));
+        innerSelect.append(sqlifyIdentifier(tableName));
         innerSelect.append(" JOIN ");
         innerSelect.append(elementTableName);
         innerSelect.append(" ON ");
-        innerSelect.append(sqlifyColumnName(tableName));
+        innerSelect.append(sqlifyIdentifier(tableName));
         innerSelect.append(".");
-        innerSelect.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
+        innerSelect.append(sqlifyIdentifier(headers[0].toString()));
         innerSelect.append(" = ");
         innerSelect.append(elementTableName);
         innerSelect.append(".ID");
         
         // Outer select statement
         StringBuffer outerSelect = new StringBuffer("SELECT ");
-        outerSelect.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
+        outerSelect.append(sqlifyIdentifier(headers[0].toString()));
         outerSelect.append(", ");
         outerSelect.append(columnName);
         outerSelect.append(" AS ");
-        outerSelect.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
+        outerSelect.append(sqlifyIdentifier(headers[1].toString()));
         if (null != optionalColumns) {
             outerSelect.append(optionalColumns);
         }
@@ -273,13 +253,13 @@ public class SqLiteWriter extends AbstractTableWriter {
         outerSelect.append(elementTableName);
         outerSelect.append(" ON INNER_JOIN");
         outerSelect.append(".");
-        outerSelect.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
+        outerSelect.append(sqlifyIdentifier(headers[1].toString()));
         outerSelect.append(" = ");
         outerSelect.append(elementTableName);
         outerSelect.append(".ID");
         
         StringBuffer sqlCreateView = new StringBuffer("CREATE VIEW IF NOT EXISTS ");
-        sqlCreateView.append(sqlifyColumnName(tableName + "_View"));
+        sqlCreateView.append(sqlifyIdentifier(tableName + " View"));
         sqlCreateView.append(" AS ");
         sqlCreateView.append(outerSelect);
         try {
@@ -299,32 +279,32 @@ public class SqLiteWriter extends AbstractTableWriter {
      */
     private void createRelationTable(String elementTableName, Object[] headers) throws IOException {
         StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
-        sqlCreate.append(sqlifyColumnName(tableName));
+        sqlCreate.append(sqlifyIdentifier(tableName));
         sqlCreate.append(" (");
         
-        sqlCreate.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
+        sqlCreate.append(sqlifyIdentifier(headers[0].toString()));
         sqlCreate.append(" INTEGER, ");
         
-        sqlCreate.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
+        sqlCreate.append(sqlifyIdentifier(headers[1].toString()));
         sqlCreate.append(" INTEGER, ");
         
         for (int i = 2; i < headers.length; i++) {
-            String columnName = sqlifyColumnName(tableName + "_" + headers[i].toString());
+            String columnName = sqlifyIdentifier(headers[i].toString());
             sqlCreate.append(columnName);
             sqlCreate.append(" TEXT, ");
         }
         
         sqlCreate.append(" FOREIGN KEY(");
-        sqlCreate.append(sqlifyColumnName(tableName + "_" + headers[0].toString()));
+        sqlCreate.append(sqlifyIdentifier(headers[0].toString()));
         sqlCreate.append(") REFERENCES ");
         sqlCreate.append(elementTableName);
         sqlCreate.append(" (ID),");
         
         sqlCreate.append(" FOREIGN KEY(");
-        sqlCreate.append(sqlifyColumnName(tableName + "_" + headers[1].toString()));
+        sqlCreate.append(sqlifyIdentifier(headers[1].toString()));
         sqlCreate.append(") REFERENCES ");
         sqlCreate.append(elementTableName);
-        sqlCreate.append("s (ID)");
+        sqlCreate.append(" (ID)");
         
         sqlCreate.append(");");
         
@@ -353,7 +333,7 @@ public class SqLiteWriter extends AbstractTableWriter {
          * Column names cannot be prepared: https://stackoverflow.com/a/27041304
          */
         sqlCreate.append(", ");
-        String columnName = sqlifyColumnName(tableName + "_Element");
+        String columnName = sqlifyIdentifier("Element");
         sqlCreate.append(columnName);
         sqlCreate.append(" TEXT,");
         sqlCreate.append(" UNIQUE(");

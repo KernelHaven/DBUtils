@@ -10,18 +10,18 @@ import java.util.Set;
 
 import net.ssehub.kernel_haven.config.Configuration;
 import net.ssehub.kernel_haven.db.AbstractSqlTableCollection;
+import net.ssehub.kernel_haven.util.Logger;
 import net.ssehub.kernel_haven.util.io.ITableCollection;
 import net.ssehub.kernel_haven.util.io.ITableReader;
 import net.ssehub.kernel_haven.util.io.ITableWriter;
 import net.ssehub.kernel_haven.util.io.TableCollectionReaderFactory;
 import net.ssehub.kernel_haven.util.io.TableCollectionWriterFactory;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;
-import net.ssehub.kernel_haven.util.null_checks.Nullable;
 
 /**
  * {@link ITableCollection} to provide read/write access to a (local) SQLite database.
+ * 
  * @author El-Sharkawy
- *
  */
 public class SqLiteCollection extends AbstractSqlTableCollection {
     
@@ -35,31 +35,40 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
         TableCollectionWriterFactory.INSTANCE.registerHandler("sqlite", SqLiteCollection.class);
     }
     
+    private static final @NonNull Logger LOGGER = Logger.get();
+    
     private @NonNull File dbFile;
     
     /**
-     * Sole constructor.
+     * Creates a collection for the given database file.
+     * 
      * @param dbFile The file to be read/written.
+     * 
+     * @throws IOException If the given databse file could not be opened.
      */
-    public SqLiteCollection(@NonNull File dbFile) {
+    public SqLiteCollection(@NonNull File dbFile) throws IOException {
         super(createConnection(dbFile));
         this.dbFile = dbFile;
     }
     
     /**
-     * Creates a new connection to the data base.
+     * Creates a new connection to the given database.
+     * 
      * @param dbFile The file for which the connections shall be opened.
-     * @return The connection or <tt>null</tt> in case of errors.
+     * 
+     * @return The created connection.
+     * 
+     * @throws IOException If opening the connection fails. 
      */
-    private static @Nullable Connection createConnection(File dbFile) {
-        Connection con = null;
+    private static @NonNull Connection createConnection(@NonNull File dbFile) throws IOException {
+        Connection con;
         String url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
         try {
             // DB parameters: Create a connection to the database
             con = DriverManager.getConnection(url);
             LOGGER.logDebug2("SQLite connection has been established for file: ", dbFile.getAbsolutePath());
         } catch (SQLException exc) {
-            LOGGER.logException("Could not establish connection to: " + dbFile.getAbsolutePath(), exc);
+            throw new IOException("Could not establish connection to: " + dbFile.getAbsolutePath(), exc);
         }
         
         return con;
@@ -68,33 +77,25 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
     @Override
     public @NonNull ITableReader getReader(@NonNull String name) throws IOException {
         Connection con = createConnection(dbFile);
-        if (null == con) {
-            throw new IOException("Could not create connection for database: " + getTableName());
-        }
-        
-        return new SqLiteReader(con, getTableName(), name);
+        return new SqLiteReader(con, getDbName(), name);
     }
 
     @Override
     public @NonNull ITableWriter getWriter(@NonNull String name) throws IOException {
         Connection con = createConnection(dbFile);
-        if (null == con) {
-            throw new IOException("Could not create connection for database: " + getTableName());
-        }
-        
-        return new SqLiteWriter(con, getTableName(), name);
+        return new SqLiteWriter(con, getDbName(), name);
     }
 
     @Override
     public @NonNull Set<@NonNull File> getFiles() throws IOException {
-        @NonNull Set<@NonNull File> files = new HashSet<>(1);
+        Set<@NonNull File> files = new HashSet<>(1);
         files.add(dbFile);
         
         return files;
     }
 
     @Override
-    protected @NonNull String getTableName() {
+    protected @NonNull String getDbName() {
         return dbFile.getAbsolutePath();
     }
     

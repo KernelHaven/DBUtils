@@ -1,5 +1,7 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
+import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.sqlifyIdentifier;
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -9,39 +11,38 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.ssehub.kernel_haven.util.Logger;
 import net.ssehub.kernel_haven.util.io.ITableReader;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;
 import net.ssehub.kernel_haven.util.null_checks.Nullable;
 
 /**
- * Reads a table from a SQLite database.
+ * Reader for a table from a SQLite database.
+ * 
  * @author El-Sharkawy
- *
  */
 public class SqLiteReader implements ITableReader {
     
-    private static final Logger LOGGER = Logger.get();
-    
-    private Connection con;
-    private String dbName;
-    private String tableName;
-    private String sqlSelectQuery;
+    private @NonNull Connection con;
+    private @NonNull String dbName;
+    private @NonNull String tableName;
     private PreparedStatement sqlSelectStatement;
     private int nColumns;
     private String[][] content;
     private int rowIndex;
 
     /**
-     * Sole constructor.
+     * Creates a reader for the given table.
+     * 
      * @param con A connection, exclusively used by this reader.
      * @param dbName The name of the database (used in log messages only).
      * @param tableName The name of the table to be ready from the database.
+     * 
+     * @throws IOException If reading the given table fails.
      */
-    SqLiteReader(Connection con, String dbName, String tableName) {
+    SqLiteReader(@NonNull Connection con, @NonNull String dbName, @NonNull String tableName) throws IOException {
         this.con = con;
         this.dbName = dbName;
-        this.tableName = sqlifyColumnName(tableName);
+        this.tableName = tableName;
         determineRelevantColumns();
         loadData();
     }
@@ -49,8 +50,10 @@ public class SqLiteReader implements ITableReader {
     /**
      * Selects all columns except for an optional ID column. However, if an ID column is present, the data is sorted
      * by the ID.
+     * 
+     * @throws IOException If reading the columns fails.
      */
-    private void determineRelevantColumns() {
+    private void determineRelevantColumns() throws IOException {
         List<String> columns = new ArrayList<>();
         boolean hasID = false;
         try {
@@ -61,36 +64,39 @@ public class SqLiteReader implements ITableReader {
                 String type = resultSet.getString("TYPE_NAME");
     
                 if (!"ID".equals(name) && !"INTEGER".equals(type)) {
-                    columns.add(name);
+                    columns.add(sqlifyIdentifier(name));
                 } else {
                     hasID = true;
                 }
             }
         } catch (SQLException exc) {
-            LOGGER.logException("Could determine columns for: " + getTableName(), exc);
+            throw new IOException("Could determine columns for: " + getTableName(), exc);
         }
         
-        if (!columns.isEmpty()) {
-            StringBuffer sql = new StringBuffer("SELECT ");
-            sql.append(columns.get(0));
-            for (int i = 1; i < columns.size(); i++) {
-                sql.append(", ");
-                sql.append(columns.get(i));
-            }
-            sql.append(" FROM ");
-            sql.append(tableName);
-            
-            if (hasID) {
-                sql.append(" ORDER BY ID");
-            }
-            
-            try {
-                sqlSelectQuery = sql.toString();
-                sqlSelectStatement = con.prepareStatement(sqlSelectQuery);
-                nColumns = columns.size();
-            } catch (SQLException e) {
-                LOGGER.logException("Could create sql statement \"" + sql.toString() + "\" for: " + getTableName(), e);
-            }
+        if (columns.isEmpty()) {
+            throw new IOException(getTableName() + " has no columns");
+        }
+        
+        StringBuffer sql = new StringBuffer("SELECT ");
+        sql.append(columns.get(0));
+        for (int i = 1; i < columns.size(); i++) {
+            sql.append(", ");
+            sql.append(columns.get(i));
+        }
+        sql.append(" FROM ");
+        sql.append(sqlifyIdentifier(tableName));
+        
+        if (hasID) {
+            sql.append(" ORDER BY ID");
+        }
+        
+        try {
+            String sqlSelectQuery = sql.toString();
+            sqlSelectStatement = con.prepareStatement(sqlSelectQuery);
+            nColumns = columns.size();
+        } catch (SQLException e) {
+            throw new IOException("Couldn't create sql statement \"" + sql.toString() + "\" for: " + getTableName(),
+                    e);
         }
     }
     
@@ -98,11 +104,9 @@ public class SqLiteReader implements ITableReader {
     public void close() throws IOException {
         content = null;
         try {
-            if (con != null) {
-                con.close();
-            }
+            con.close();
         } catch (SQLException exc) {
-            LOGGER.logException("Could not close connection for: " + getTableName(), exc);
+            throw new IOException("Could not close connection for: " + getTableName(), exc);
         }
     }
 
@@ -113,8 +117,10 @@ public class SqLiteReader implements ITableReader {
 
     /**
      * Loads all data to provide line based reading as well as reading the complete data in one step.
+     * 
+     * @throws IOException If reading the data fails.
      */
-    private void loadData() {
+    private void loadData() throws IOException {
         try {
             List<String[]> rows = new ArrayList<>();
             ResultSet rs = sqlSelectStatement.executeQuery();
@@ -127,7 +133,7 @@ public class SqLiteReader implements ITableReader {
             }
             content = rows.toArray(new String[0][]);
         } catch (SQLException e) {
-            LOGGER.logException("Could not execute query \"" + sqlSelectStatement.toString()
+            throw new IOException("Could not execute query \"" + sqlSelectStatement.toString()
                 + "\" for: " + getTableName(), e);
         }
     }
@@ -139,31 +145,11 @@ public class SqLiteReader implements ITableReader {
     
     /**
      * Returns the name of the database and the table for logging information.
+     * 
      * @return The name of the database and the table for logging information.
      */
     private String getTableName() {
         return tableName + " in " + dbName;
     }
 
-    /**
-     * Avoids illegal column names, not supported by SQL.
-     * 
-     * @param columnName The name to verify its correct name.
-     * 
-     * @return A legal name based on the provided instance, this will be a new instance in any case.
-     */
-    private @NonNull String sqlifyColumnName(@NonNull String columnName) {
-        StringBuilder result = new StringBuilder(columnName);
-        for (int i = 0; i < result.length(); i++) {
-            char character = result.charAt(i);
-            boolean smallChar = (character >= 'A' && character <= 'Z');
-            boolean bigChar = (character >= 'a' && character <= 'z');
-            boolean number = (character >= '0' && character <= '9') && i != 0; // number only allowed after first pos
-            if (!smallChar && !bigChar && !number) {
-                result.setCharAt(i, '_');
-            }
-        }
-        
-        return result.toString();
-    }
 }
