@@ -5,7 +5,6 @@ import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.sqlifyIdenti
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -25,9 +24,10 @@ public class SqLiteReader implements ITableReader {
     private @NonNull Connection con;
     private @NonNull String dbName;
     private @NonNull String tableName;
-    private PreparedStatement sqlSelectStatement;
+    
+    private @NonNull ResultSet resultSet;
+    
     private int nColumns;
-    private String[][] content;
     private int rowIndex;
 
     /**
@@ -43,17 +43,23 @@ public class SqLiteReader implements ITableReader {
         this.con = con;
         this.dbName = dbName;
         this.tableName = tableName;
-        determineRelevantColumns();
-        loadData();
+        
+        init();
     }
     
     /**
+     * <p>
+     * Initializes the reading. Loads column information and fires the query (sets {@link #resultSet} and
+     * {@link #nColumns}).
+     * </p>
+     * <p>
      * Selects all columns except for an optional ID column. However, if an ID column is present, the data is sorted
      * by the ID.
+     * </p>
      * 
-     * @throws IOException If reading the columns fails.
+     * @throws IOException If setting up or executing the SQL query fails.
      */
-    private void determineRelevantColumns() throws IOException {
+    private void init() throws IOException {
         List<String> columns = new ArrayList<>();
         boolean hasID = false;
         try {
@@ -90,19 +96,19 @@ public class SqLiteReader implements ITableReader {
             sql.append(" ORDER BY ID");
         }
         
+        String sqlSelectQuery = sql.toString();
         try {
-            String sqlSelectQuery = sql.toString();
-            sqlSelectStatement = con.prepareStatement(sqlSelectQuery);
+            resultSet = con.prepareStatement(sqlSelectQuery).executeQuery();
             nColumns = columns.size();
+            
         } catch (SQLException e) {
-            throw new IOException("Couldn't create sql statement \"" + sql.toString() + "\" for: " + getTableName(),
+            throw new IOException("Couldn't execute SQL statement \"" + sqlSelectQuery + "\" for: " + getTableName(),
                     e);
         }
     }
     
     @Override
     public void close() throws IOException {
-        content = null;
         try {
             con.close();
         } catch (SQLException exc) {
@@ -112,29 +118,22 @@ public class SqLiteReader implements ITableReader {
 
     @Override
     public @NonNull String @Nullable [] readNextRow() throws IOException {
-        return rowIndex < content.length ? content[rowIndex++] : null;
-    }
-
-    /**
-     * Loads all data to provide line based reading as well as reading the complete data in one step.
-     * 
-     * @throws IOException If reading the data fails.
-     */
-    private void loadData() throws IOException {
         try {
-            List<String[]> rows = new ArrayList<>();
-            ResultSet rs = sqlSelectStatement.executeQuery();
-            while (rs.next()) {
-                String[] row = new String[nColumns];
-                for (int i = 0; i < row.length; i++) {
-                    row[i] = rs.getString((i + 1));
+            @NonNull String[] result = null;
+            
+            if (resultSet.next()) {
+                rowIndex++;
+                result = new String[nColumns];
+                
+                for (int i = 0; i < result.length; i++) {
+                    result[i] = resultSet.getString((i + 1));
                 }
-                rows.add(row);
             }
-            content = rows.toArray(new String[0][]);
+            
+            return result;
+            
         } catch (SQLException e) {
-            throw new IOException("Could not execute query \"" + sqlSelectStatement.toString()
-                + "\" for: " + getTableName(), e);
+            throw new IOException("Can't read next row in " + getTableName(), e);
         }
     }
 

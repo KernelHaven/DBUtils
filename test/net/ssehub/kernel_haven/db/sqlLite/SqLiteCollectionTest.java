@@ -1,5 +1,10 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -63,12 +68,12 @@ public class SqLiteCollectionTest {
     }
 
     /**
-     * Adds two entries to the DB and reads them to verify whether they are written/read correctly.
+     * Adds two entries (objects) to the DB and reads them to verify whether they are written/read correctly.
      */
     @Test
-    public void testWriteAndRead() {
+    public void testWriteAndReadObject() {
         // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testWriteAndRead.sqlite");
+        File tmpFile = new File(AllTests.TESTDATA, "testWriteAndReadObject.sqlite");
         if (tmpFile.exists()) {
             tmpFile.delete();
         }
@@ -84,9 +89,57 @@ public class SqLiteCollectionTest {
             writer.close();
             
             reader = sqLiteDB.getReader("Test");
-            String[][] fullContent = reader.readFull();
             
-            assertContent(fullContent, elem1, elem2);
+            assertContent(reader, elem1, elem2);
+            
+        } catch (IOException exc) {
+            Assert.fail(exc.toString());
+        } finally {
+            if (null != reader) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+    
+    /**
+     * Tests writing and reading a table (like {@link #testWriteAndReadObject()}), but using
+     * {@link ITableWriter#writeRow(Object...)} instead of {@link ITableWriter#writeObject(Object)}.
+     */
+    @Test
+    public void testWriteAndReadRows() {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testWriteAndReadRows.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        ITableReader reader = null;
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
+            ITableWriter writer = sqLiteDB.getWriter("Test")) {
+            
+            writer.writeHeader("First Name", "Last Name");
+            writer.writeRow("Donald", "Duck");
+            writer.writeRow("Scrooge", "McDuck");
+            writer.writeRow("Daisy", "Duck");
+            
+            writer.close();
+            
+            reader = sqLiteDB.getReader("Test");
+            
+            assertThat(reader.getLineNumber(), is(0));
+            
+            assertThat(reader.readNextRow(), is(new String[] {"Donald", "Duck"}));
+            assertThat(reader.getLineNumber(), is(1));
+            assertThat(reader.readNextRow(), is(new String[] {"Scrooge", "McDuck"}));
+            assertThat(reader.getLineNumber(), is(2));
+            assertThat(reader.readNextRow(), is(new String[] {"Daisy", "Duck"}));
+            assertThat(reader.getLineNumber(), is(3));
+
+            assertThat(reader.readNextRow(), nullValue());
             
         } catch (IOException exc) {
             Assert.fail(exc.toString());
@@ -123,9 +176,8 @@ public class SqLiteCollectionTest {
             writer.close();
             
             reader = sqLiteDB.getReader("Test Table");
-            String[][] fullContent = reader.readFull();
             
-            assertContent(fullContent, elem1, elem2);
+            assertContent(reader, elem1, elem2);
             
         } catch (IOException exc) {
             Assert.fail(exc.toString());
@@ -139,21 +191,31 @@ public class SqLiteCollectionTest {
             }
         }
     }
-
+    
     /**
      * Checks whether the read content matches to the expected (written) {@link TestData}.
-     * @param fullContent The read (asserted) content.
+     * 
+     * @param reader The reader to get the data from.
      * @param expectedElements The written (expected) elements. Must have the same size as <tt>fullContent</tt>.
+     * 
+     * @throws IOException If reading the reader fails.
      */
-    private void assertContent(String[][] fullContent, TestData... expectedElements) {
-        Assert.assertEquals("Unexpected number of rows", expectedElements.length, fullContent.length);
-        
+    private void assertContent(ITableReader reader, TestData... expectedElements) throws IOException {
         int rowIndex = 0;
-        for (String[] row : fullContent) {
+        assertThat(reader.getLineNumber(), is(0));
+        String[] row;
+        while ((row = reader.readNextRow()) != null) {
+            assertThat(reader.getLineNumber(), is(rowIndex + 1));
+            
             Assert.assertEquals("Unexpected value in cell [0, 0]", expectedElements[rowIndex].getName(), row[0]);
             Assert.assertEquals("Unexpected value in cell [0, 1]", expectedElements[rowIndex].getValue(), row[1]);
             rowIndex++;
         }
+        
+        if (rowIndex != expectedElements.length) {
+            fail("Expected further row, but got null");
+        }
+        assertThat(reader.getLineNumber(), is(expectedElements.length));
     }
     
     /**
