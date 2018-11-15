@@ -271,13 +271,25 @@ public class SqLiteCollectionTest {
             + tmpFile.getAbsolutePath(), tmpFile.exists());
         
         try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
-            
+            // Write relational data (will create an view)
             try (ITableWriter writer = collection.getWriter("Feature Dependencies")) {
                 writer.writeObject(new RelationData("A", "B"));
                 writer.writeObject(new RelationData("A", "C"));
                 writer.writeObject(new RelationData("B", "C"));
             }
             
+            // Test correct creation of view
+            String[] expectedDependents = {"A", "A", "B"};
+            String[] expectedDependentOns = {"B", "C", "C"};
+            try (ITableReader reader = collection.getReader("Feature Dependencies View")) {
+                String[][] content = reader.readFull();
+                Assert.assertEquals(3, content.length);
+                for (int i = 0; i < content.length; i++) {
+                    Assert.assertEquals(2, content[i].length);
+                    Assert.assertEquals(content[i][0], expectedDependents[i]);
+                    Assert.assertEquals(content[i][1], expectedDependentOns[i]);
+                }
+            }
         }
     }
     
@@ -297,13 +309,27 @@ public class SqLiteCollectionTest {
             + tmpFile.getAbsolutePath(), tmpFile.exists());
         
         try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
-            
+            // Write relational data (will create an view)
             try (ITableWriter writer = collection.getWriter("Feature Dependencies")) {
                 writer.writeObject(new RelationDataWithExtraElement("A", "B", "Context 1"));
                 writer.writeObject(new RelationDataWithExtraElement("A", "C", "Context 2"));
                 writer.writeObject(new RelationDataWithExtraElement("B", "C", "Context 3"));
             }
             
+            // Test correct creation of view
+            String[] expectedDependents = {"A", "A", "B"};
+            String[] expectedDependentOns = {"B", "C", "C"};
+            String[] expectedContexts = {"Context 1", "Context 2", "Context 3"};
+            try (ITableReader reader = collection.getReader("Feature Dependencies View")) {
+                String[][] content = reader.readFull();
+                Assert.assertEquals(3, content.length);
+                for (int i = 0; i < content.length; i++) {
+                    Assert.assertEquals(3, content[i].length);
+                    Assert.assertEquals(content[i][0], expectedDependents[i]);
+                    Assert.assertEquals(content[i][1], expectedDependentOns[i]);
+                    Assert.assertEquals(content[i][2], expectedContexts[i]);
+                }
+            }
         }
     }
     
