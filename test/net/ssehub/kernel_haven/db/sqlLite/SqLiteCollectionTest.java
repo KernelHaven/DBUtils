@@ -132,6 +132,9 @@ public class SqLiteCollectionTest {
             
             assertThat(reader.getLineNumber(), is(0));
             
+            assertThat(reader.readNextRow(), is(new String[] {"First Name", "Last Name"}));
+            assertThat(reader.getLineNumber(), is(0)); // header is not an SQL row
+            
             assertThat(reader.readNextRow(), is(new String[] {"Donald", "Duck"}));
             assertThat(reader.getLineNumber(), is(1));
             assertThat(reader.readNextRow(), is(new String[] {"Scrooge", "McDuck"}));
@@ -203,6 +206,11 @@ public class SqLiteCollectionTest {
     private void assertContent(ITableReader reader, TestData... expectedElements) throws IOException {
         int rowIndex = 0;
         assertThat(reader.getLineNumber(), is(0));
+        
+        // read  header
+        assertThat(reader.readNextRow(), is(new String[] {"name", "value"}));
+        assertThat(reader.getLineNumber(), is(0)); // header is not an SQL row
+        
         String[] row;
         while ((row = reader.readNextRow()) != null) {
             assertThat(reader.getLineNumber(), is(rowIndex + 1));
@@ -346,11 +354,12 @@ public class SqLiteCollectionTest {
             
             try (ITableReader reader = collection.getReader("Feature Dependencies View")) {
                 String[][] content = reader.readFull();
-                Assert.assertEquals(3, content.length);
-                for (int i = 0; i < content.length; i++) {
+                Assert.assertEquals(4, content.length);
+                assertThat(content[0], is(new String[] {"Feature", "Depends On"}));
+                for (int i = 1; i < content.length; i++) {
                     Assert.assertEquals(2, content[i].length);
-                    Assert.assertEquals(content[i][0], expectedDependents[i]);
-                    Assert.assertEquals(content[i][1], expectedDependentOns[i]);
+                    Assert.assertEquals(expectedDependents[i - 1], content[i][0]);
+                    Assert.assertEquals(expectedDependentOns[i - 1], content[i][1]);
                 }
             }
         }
@@ -385,12 +394,13 @@ public class SqLiteCollectionTest {
             String[] expectedContexts = {"Context 1", "Context 2", "Context 3"};
             try (ITableReader reader = collection.getReader("Feature Dependencies View")) {
                 String[][] content = reader.readFull();
-                Assert.assertEquals(3, content.length);
-                for (int i = 0; i < content.length; i++) {
+                Assert.assertEquals(4, content.length);
+                assertThat(content[0], is(new String[] {"Feature", "Depends On", "Context"}));
+                for (int i = 1; i < content.length; i++) {
                     Assert.assertEquals(3, content[i].length);
-                    Assert.assertEquals(content[i][0], expectedDependents[i]);
-                    Assert.assertEquals(content[i][1], expectedDependentOns[i]);
-                    Assert.assertEquals(content[i][2], expectedContexts[i]);
+                    Assert.assertEquals(expectedDependents[i - 1], content[i][0]);
+                    Assert.assertEquals(expectedDependentOns[i - 1], content[i][1]);
+                    Assert.assertEquals(expectedContexts[i - 1], content[i][2]);
                 }
             }
         }
@@ -441,19 +451,21 @@ public class SqLiteCollectionTest {
         try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
             try (ITableReader reader = collection.getReader("Features")) {
                 String[][] firstContent = reader.readFull();
-                Assert.assertEquals(3, firstContent.length);
-                for (int i = 0; i < firstContent.length; i++) {
-                    Assert.assertEquals(firstContent[i][0], firstDataSet.get(i).name);
-                    Assert.assertEquals(firstContent[i][1], firstDataSet.get(i).value);
+                Assert.assertEquals(4, firstContent.length);
+                assertThat(firstContent[0], is(new String[] {"name", "value"}));
+                for (int i = 1; i < firstContent.length; i++) {
+                    Assert.assertEquals(firstDataSet.get(i - 1).name, firstContent[i][0]);
+                    Assert.assertEquals(firstDataSet.get(i - 1).value, firstContent[i][1]);
                 }
             }
             // Contents of relation data (isRelation flag) can be retrieved from table_View
             try (ITableReader reader = collection.getReader("Feature Dependencies View")) {
                 String[][] secondContent = reader.readFull();
-                Assert.assertEquals(3, secondContent.length);
-                for (int i = 0; i < secondContent.length; i++) {
-                    Assert.assertEquals(secondContent[i][0], secondDataSet.get(i).feature);
-                    Assert.assertEquals(secondContent[i][1], secondDataSet.get(i).dependsOn);
+                Assert.assertEquals(4, secondContent.length);
+                assertThat(secondContent[0], is(new String[] {"Feature", "Depends On"}));
+                for (int i = 1; i < secondContent.length; i++) {
+                    Assert.assertEquals(secondDataSet.get(i - 1).feature, secondContent[i][0]);
+                    Assert.assertEquals(secondDataSet.get(i - 1).dependsOn, secondContent[i][1]);
                 }
             }
         }

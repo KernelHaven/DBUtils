@@ -22,12 +22,22 @@ import net.ssehub.kernel_haven.util.null_checks.Nullable;
 public class SqLiteReader implements ITableReader {
     
     private @NonNull Connection con;
+    
     private @NonNull String dbName;
+    
     private @NonNull String tableName;
     
     private @NonNull ResultSet resultSet;
     
+    private @NonNull String @NonNull [] header;
+
+    /**
+     * Whether {@link #readNextRow()} already returned the header.
+     */
+    private boolean returnedHeader;
+    
     private int nColumns;
+    
     private int rowIndex;
 
     /**
@@ -70,7 +80,7 @@ public class SqLiteReader implements ITableReader {
                 String type = resultSet.getString("TYPE_NAME");
     
                 if (!"ID".equals(name) && !"INTEGER".equals(type)) {
-                    columns.add(sqlifyIdentifier(name));
+                    columns.add(name);
                 } else {
                     hasID = true;
                 }
@@ -83,11 +93,15 @@ public class SqLiteReader implements ITableReader {
             throw new IOException(getTableName() + " has no columns");
         }
         
+        header = new String[columns.size()];
+        
         StringBuffer sql = new StringBuffer("SELECT ");
-        sql.append(columns.get(0));
+        sql.append(sqlifyIdentifier(columns.get(0)));
+        header[0] = columns.get(0);
         for (int i = 1; i < columns.size(); i++) {
             sql.append(", ");
-            sql.append(columns.get(i));
+            sql.append(sqlifyIdentifier(columns.get(i)));
+            header[i] = columns.get(i);
         }
         sql.append(" FROM ");
         sql.append(sqlifyIdentifier(tableName));
@@ -118,23 +132,31 @@ public class SqLiteReader implements ITableReader {
 
     @Override
     public @NonNull String @Nullable [] readNextRow() throws IOException {
-        try {
-            @NonNull String[] result = null;
+        @NonNull String[] result = null;
+        
+        if (!returnedHeader) {
+            // first iteration will return the header
+            result = header;
+            returnedHeader = true;
             
-            if (resultSet.next()) {
-                rowIndex++;
-                result = new String[nColumns];
+        } else {
+            try {
                 
-                for (int i = 0; i < result.length; i++) {
-                    result[i] = resultSet.getString((i + 1));
+                if (resultSet.next()) {
+                    rowIndex++;
+                    result = new String[nColumns];
+                    
+                    for (int i = 0; i < result.length; i++) {
+                        result[i] = resultSet.getString((i + 1));
+                    }
                 }
+                
+            } catch (SQLException e) {
+                throw new IOException("Can't read next row in " + getTableName(), e);
             }
-            
-            return result;
-            
-        } catch (SQLException e) {
-            throw new IOException("Can't read next row in " + getTableName(), e);
         }
+        
+        return result;
     }
 
     @Override
