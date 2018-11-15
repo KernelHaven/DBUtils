@@ -69,62 +69,58 @@ public class SqLiteWriter extends AbstractTableWriter {
     
     @Override
     public void writeHeader(@Nullable Object /*@NonNull*/ ... fields) throws IOException {
-        // Create tables
-        if (null != fields && fields.length > 0) {
-            // Create the table containing the element definitions
-            StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
-            sqlCreate.append(sqlifyIdentifier(tableName));
-            sqlCreate.append(" (");
-            sqlCreate.append("ID INTEGER PRIMARY KEY");
+        // Create the table containing the element definitions
+        StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
+        sqlCreate.append(sqlifyIdentifier(tableName));
+        sqlCreate.append(" (");
+        sqlCreate.append("ID INTEGER PRIMARY KEY");
+        
+        StringBuffer sqlInsert = new StringBuffer("INSERT INTO ");
+        sqlInsert.append(sqlifyIdentifier(tableName));
+        sqlInsert.append(" VALUES (");
+        sqlInsert.append("NULL");
+        
+        for (int i = 0; i < fields.length; i++) {
+            sqlCreate.append(", ");
+            String columnName = sqlifyIdentifier(fields[i].toString());
+            sqlCreate.append(columnName);
+            sqlCreate.append(" TEXT");
             
-            StringBuffer sqlInsert = new StringBuffer("INSERT INTO ");
-            sqlInsert.append(sqlifyIdentifier(tableName));
-            sqlInsert.append(" VALUES (");
-            sqlInsert.append("NULL");
+            sqlInsert.append(", ?");
+        }
+        
+        sqlCreate.append(");");
+        sqlInsert.append(");");
+        try {
+            PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
+            sqlStatement.execute();
             
-            for (int i = 0; i < fields.length; i++) {
-                /*
-                 * Avoid illegal table names
-                 * Column names cannot be prepared: https://stackoverflow.com/a/27041304
-                 */
-                sqlCreate.append(", ");
-                String columnName = sqlifyIdentifier(fields[i].toString());
-                sqlCreate.append(columnName);
-                sqlCreate.append(" TEXT");
-                
-                sqlInsert.append(", ?");
-            }
-            
-            sqlCreate.append(");");
-            sqlInsert.append(");");
-            try {
-                PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
-                sqlStatement.execute();
-                
-                sqlInsertQuery = sqlInsert.toString();
-                sqlInsertStatement = con.prepareStatement(sqlInsertQuery);
-            } catch (SQLException exc) {
-                throw new IOException("Could not prepare SQL queries", exc);
-            }
+            sqlInsertQuery = sqlInsert.toString();
+            sqlInsertStatement = con.prepareStatement(sqlInsertQuery);
+        } catch (SQLException exc) {
+            throw new IOException("Could not prepare SQL queries", exc);
         }
     }
     
     @Override
-    public void writeRow(@Nullable Object... columns) throws IOException {
-        if (null != columns) {
-            for (int i = 0; i < columns.length; i++) {
-                try {
-                    sqlInsertStatement.setString((i + 1), columns[i].toString());
-                } catch (SQLException e) {
-                    throw new IOException("Could not prepare statement " + i + " in " + sqlInsertQuery
-                        + " with values: " + columns.toString() + " for: " + getTableName());
-                }
-            }
+    public void writeRow(@Nullable Object /*@NonNull*/ ... columns) throws IOException {
+        if (sqlInsertStatement == null) {
+            throw new IOException("writeHeader() must be called before writeRow()");
+        }
+        
+        for (int i = 0; i < columns.length; i++) {
             try {
-                sqlInsertStatement.execute();
+                sqlInsertStatement.setString((i + 1), columns[i].toString());
             } catch (SQLException e) {
-                throw new IOException("Could not execute query \"" + sqlInsertQuery + "\" for: " + getTableName());
+                throw new IOException("Could not prepare statement " + i + " in " + sqlInsertQuery
+                    + " with values: " + columns.toString() + " for: " + getTableName());
             }
+        }
+        
+        try {
+            sqlInsertStatement.execute();
+        } catch (SQLException e) {
+            throw new IOException("Could not execute query \"" + sqlInsertQuery + "\" for: " + getTableName());
         }
     }
 
@@ -333,10 +329,6 @@ public class SqLiteWriter extends AbstractTableWriter {
         sqlCreate.append(" (");
         sqlCreate.append("ID INTEGER PRIMARY KEY");
         
-        /*
-         * Avoid illegal table names
-         * Column names cannot be prepared: https://stackoverflow.com/a/27041304
-         */
         sqlCreate.append(", ");
         String columnName = sqlifyIdentifier("Element");
         sqlCreate.append(columnName);

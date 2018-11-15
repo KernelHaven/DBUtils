@@ -396,5 +396,19 @@ public class SqLiteCollectionTest {
             }
         }
     }
+    
+    /**
+     * Tests that writing before calling {@link ITableWriter#writeHeader(Object...)} throws an {@link IOException}.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testWriteBeforeHeader() throws IOException {
+        try (SqLiteCollection db = new SqLiteCollection(new File(AllTests.TESTDATA, "testWriteBeforeHeader.sqlite"))) {
+            try (ITableWriter out = db.getWriter("SomeTable")) {
+                out.writeRow("Some", "Row");
+            }
+        }
+    }
 
 }
