@@ -1,5 +1,6 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
+import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.OLD_STYLE_IDENTIFIER_SQLIFY;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
@@ -90,7 +91,7 @@ public class SqLiteCollectionTest {
             
             reader = sqLiteDB.getReader("Test");
             
-            assertContent(reader, elem1, elem2);
+            assertContent(reader, "Test", elem1, elem2);
             
         } catch (IOException exc) {
             Assert.fail(exc.toString());
@@ -132,7 +133,11 @@ public class SqLiteCollectionTest {
             
             assertThat(reader.getLineNumber(), is(0));
             
-            assertThat(reader.readNextRow(), is(new String[] {"First Name", "Last Name"}));
+            if (OLD_STYLE_IDENTIFIER_SQLIFY) {
+                assertThat(reader.readNextRow(), is(new String[] {"Test_First_Name", "Test_Last_Name"}));
+            } else {
+                assertThat(reader.readNextRow(), is(new String[] {"First Name", "Last Name"}));
+            }
             assertThat(reader.getLineNumber(), is(0)); // header is not an SQL row
             
             assertThat(reader.readNextRow(), is(new String[] {"Donald", "Duck"}));
@@ -168,6 +173,8 @@ public class SqLiteCollectionTest {
             tmpFile.delete();
         }
         
+        String tableName = OLD_STYLE_IDENTIFIER_SQLIFY ? "Test_Table" : "Test Table";
+        
         ITableReader reader = null;
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
             ITableWriter writer = sqLiteDB.getWriter("Test Table")) {
@@ -178,9 +185,9 @@ public class SqLiteCollectionTest {
             writer.writeObject(elem2);
             writer.close();
             
-            reader = sqLiteDB.getReader("Test Table");
+            reader = sqLiteDB.getReader(tableName);
             
-            assertContent(reader, elem1, elem2);
+            assertContent(reader, "Test_Table", elem1, elem2);
             
         } catch (IOException exc) {
             Assert.fail(exc.toString());
@@ -199,16 +206,21 @@ public class SqLiteCollectionTest {
      * Checks whether the read content matches to the expected (written) {@link TestData}.
      * 
      * @param reader The reader to get the data from.
+     * @param tableName The name of the table the data is in (for old-style column names).
      * @param expectedElements The written (expected) elements. Must have the same size as <tt>fullContent</tt>.
      * 
      * @throws IOException If reading the reader fails.
      */
-    private void assertContent(ITableReader reader, TestData... expectedElements) throws IOException {
+    private void assertContent(ITableReader reader, String tableName, TestData... expectedElements) throws IOException {
         int rowIndex = 0;
         assertThat(reader.getLineNumber(), is(0));
         
         // read  header
-        assertThat(reader.readNextRow(), is(new String[] {"name", "value"}));
+        if (OLD_STYLE_IDENTIFIER_SQLIFY) {
+            assertThat(reader.readNextRow(), is(new String[] {tableName + "_name", tableName + "_value"}));
+        } else {
+            assertThat(reader.readNextRow(), is(new String[] {"name", "value"}));
+        }
         assertThat(reader.getLineNumber(), is(0)); // header is not an SQL row
         
         String[] row;
@@ -352,10 +364,17 @@ public class SqLiteCollectionTest {
             String[] expectedDependents = {"A", "A", "B"};
             String[] expectedDependentOns = {"B", "C", "C"};
             
-            try (ITableReader reader = collection.getReader("Feature Dependencies View")) {
+            String tableName = OLD_STYLE_IDENTIFIER_SQLIFY
+                    ? "Feature_Dependencies_View" : "Feature Dependencies View";
+            try (ITableReader reader = collection.getReader(tableName)) {
                 String[][] content = reader.readFull();
                 Assert.assertEquals(4, content.length);
-                assertThat(content[0], is(new String[] {"Feature", "Depends On"}));
+                if (OLD_STYLE_IDENTIFIER_SQLIFY) {
+                    assertThat(content[0], is(new String[] {"Feature_Dependencies_Feature",
+                        "Feature_Dependencies_Depends_On"}));
+                } else {
+                    assertThat(content[0], is(new String[] {"Feature", "Depends On"}));
+                }
                 for (int i = 1; i < content.length; i++) {
                     Assert.assertEquals(2, content[i].length);
                     Assert.assertEquals(expectedDependents[i - 1], content[i][0]);
@@ -392,10 +411,16 @@ public class SqLiteCollectionTest {
             String[] expectedDependents = {"A", "A", "B"};
             String[] expectedDependentOns = {"B", "C", "C"};
             String[] expectedContexts = {"Context 1", "Context 2", "Context 3"};
-            try (ITableReader reader = collection.getReader("Feature Dependencies View")) {
+            String tableName = OLD_STYLE_IDENTIFIER_SQLIFY ? "Feature_Dependencies_View" : "Feature Dependencies View";
+            try (ITableReader reader = collection.getReader(tableName)) {
                 String[][] content = reader.readFull();
                 Assert.assertEquals(4, content.length);
-                assertThat(content[0], is(new String[] {"Feature", "Depends On", "Context"}));
+                if (OLD_STYLE_IDENTIFIER_SQLIFY) {
+                    assertThat(content[0], is(new String[] {"Feature_Dependencies_Feature",
+                        "Feature_Dependencies_Depends_On", "Feature_Dependencies_Context"}));
+                } else {
+                    assertThat(content[0], is(new String[] {"Feature", "Depends On", "Context"}));
+                }
                 for (int i = 1; i < content.length; i++) {
                     Assert.assertEquals(3, content[i].length);
                     Assert.assertEquals(expectedDependents[i - 1], content[i][0]);
@@ -452,17 +477,27 @@ public class SqLiteCollectionTest {
             try (ITableReader reader = collection.getReader("Features")) {
                 String[][] firstContent = reader.readFull();
                 Assert.assertEquals(4, firstContent.length);
-                assertThat(firstContent[0], is(new String[] {"name", "value"}));
+                if (OLD_STYLE_IDENTIFIER_SQLIFY) {
+                    assertThat(firstContent[0], is(new String[] {"Features_name", "Features_value"}));
+                } else {
+                    assertThat(firstContent[0], is(new String[] {"name", "value"}));
+                }
                 for (int i = 1; i < firstContent.length; i++) {
                     Assert.assertEquals(firstDataSet.get(i - 1).name, firstContent[i][0]);
                     Assert.assertEquals(firstDataSet.get(i - 1).value, firstContent[i][1]);
                 }
             }
             // Contents of relation data (isRelation flag) can be retrieved from table_View
-            try (ITableReader reader = collection.getReader("Feature Dependencies View")) {
+            String tableName = OLD_STYLE_IDENTIFIER_SQLIFY ? "Feature_Dependencies_View" : "Feature Dependencies View";
+            try (ITableReader reader = collection.getReader(tableName)) {
                 String[][] secondContent = reader.readFull();
                 Assert.assertEquals(4, secondContent.length);
-                assertThat(secondContent[0], is(new String[] {"Feature", "Depends On"}));
+                if (OLD_STYLE_IDENTIFIER_SQLIFY) {
+                    assertThat(secondContent[0], is(new String[] {"Feature_Dependencies_Feature",
+                        "Feature_Dependencies_Depends_On"}));
+                } else {
+                    assertThat(secondContent[0], is(new String[] {"Feature", "Depends On"}));
+                }
                 for (int i = 1; i < secondContent.length; i++) {
                     Assert.assertEquals(secondDataSet.get(i - 1).feature, secondContent[i][0]);
                     Assert.assertEquals(secondDataSet.get(i - 1).dependsOn, secondContent[i][1]);

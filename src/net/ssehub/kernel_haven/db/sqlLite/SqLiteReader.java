@@ -1,6 +1,6 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
-import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.sqlifyIdentifier;
+import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.escapeSqlIdentifier;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -96,15 +96,15 @@ public class SqLiteReader implements ITableReader {
         header = new String[columns.size()];
         
         StringBuffer sql = new StringBuffer("SELECT ");
-        sql.append(sqlifyIdentifier(columns.get(0)));
+        sql.append(escapeSqlIdentifier(columns.get(0)));
         header[0] = columns.get(0);
         for (int i = 1; i < columns.size(); i++) {
             sql.append(", ");
-            sql.append(sqlifyIdentifier(columns.get(i)));
+            sql.append(escapeSqlIdentifier(columns.get(i)));
             header[i] = columns.get(i);
         }
         sql.append(" FROM ");
-        sql.append(sqlifyIdentifier(tableName));
+        sql.append(escapeSqlIdentifier(tableName));
         
         if (hasID) {
             sql.append(" ORDER BY ID");
