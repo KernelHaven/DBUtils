@@ -19,7 +19,11 @@ import net.ssehub.kernel_haven.util.null_checks.Nullable;
  */
 public abstract class AbstractSqlTableCollection implements ITableCollection {
     
-    public static final boolean OLD_STYLE_IDENTIFIER_SQLIFY = true;
+    /**
+     * TODO: this can be removed (permanently set to false) once there is no use-case for the old-style column/table
+     * names.
+     */
+    public static final boolean OLD_STYLE_IDENTIFIER_SQLIFY = false;
     
     private @NonNull Connection con;
     
