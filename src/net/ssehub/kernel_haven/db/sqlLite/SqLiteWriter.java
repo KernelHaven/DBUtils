@@ -69,6 +69,10 @@ public class SqLiteWriter extends AbstractTableWriter {
     
     @Override
     public void writeHeader(@Nullable Object /*@NonNull*/ ... fields) throws IOException {
+        if (fields.length < 1) {
+            throw new IOException("Can't create a table with no columns");
+        }
+        
         // Create the table containing the element definitions
         StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
         sqlCreate.append(sqlifyIdentifier(tableName, null));
@@ -92,8 +96,8 @@ public class SqLiteWriter extends AbstractTableWriter {
         sqlCreate.append(");");
         sqlInsert.append(");");
         try {
-            PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
-            sqlStatement.execute();
+            con.prepareStatement("DROP TABLE IF EXISTS " + sqlifyIdentifier(tableName, null) + ";").execute();
+            con.prepareStatement(sqlCreate.toString()).execute();
             
             sqlInsertQuery = sqlInsert.toString();
             sqlInsertStatement = con.prepareStatement(sqlInsertQuery);

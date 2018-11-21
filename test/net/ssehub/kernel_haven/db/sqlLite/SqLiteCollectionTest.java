@@ -9,7 +9,9 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -20,6 +22,7 @@ import net.ssehub.kernel_haven.util.io.ITableReader;
 import net.ssehub.kernel_haven.util.io.ITableWriter;
 import net.ssehub.kernel_haven.util.io.TableElement;
 import net.ssehub.kernel_haven.util.io.TableRow;
+import net.ssehub.kernel_haven.util.null_checks.NonNull;
 
 /**
  * Tests the {@link SqLiteCollection}.
@@ -620,6 +623,138 @@ public class SqLiteCollectionTest {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+            }
+        }
+    }
+    
+    /**
+     * Tests the getFiles() method.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testGetFiles() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testGetFiles.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            Set<@NonNull File> expectedFiles = new HashSet<>();
+            expectedFiles.add(tmpFile);
+            assertThat(sqLiteDB.getFiles(), is(expectedFiles));
+        }
+    }
+    
+    /**
+     * Tests the getTableNames() method.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testGetTableNames() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testGetTableNames.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            Set<@NonNull String> expectedTables = new HashSet<>();
+            
+            assertThat(sqLiteDB.getTableNames(), is(expectedTables));
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table 1")) {
+                out.writeHeader("Column 1", "Column 2");
+            }
+            
+            expectedTables.add("Table 1");
+            assertThat(sqLiteDB.getTableNames(), is(expectedTables));
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table 2")) {
+                out.writeHeader("Column 1", "Column 2");
+            }
+            
+            expectedTables.add("Table 2");
+            assertThat(sqLiteDB.getTableNames(), is(expectedTables));
+        }
+    }
+    
+    /**
+     * Tests that reading a non-existing table correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testReadNonExisting() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testReadNonExisting.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            sqLiteDB.getReader("DoesntExist");
+        }
+    }
+    
+    /**
+     * Tests that trying to create a writer for an existing table correctly overwrites the table.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testWriteExisting() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testWriteExisting.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+                out.writeHeader("Column A", "Column B");
+                out.writeRow("ABC", "DEF");
+            }
+            
+            try (ITableReader in = sqLiteDB.getReader("Table")) {
+                assertThat(in.readNextRow(), is(new String[] {"Column A", "Column B"}));
+                assertThat(in.readNextRow(), is(new String[] {"ABC", "DEF"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+                out.writeHeader("Column 1", "Column 2");
+                out.writeRow("Alpha", "Beta");
+            }
+            
+            try (ITableReader in = sqLiteDB.getReader("Table")) {
+                assertThat(in.readNextRow(), is(new String[] {"Column 1", "Column 2"}));
+                assertThat(in.readNextRow(), is(new String[] {"Alpha", "Beta"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+        }
+    }
+    
+    /**
+     * Tests that creating a table with no columns correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testTableWithNoColumns() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testTableWithNoColumns.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+                out.writeHeader();
             }
         }
     }

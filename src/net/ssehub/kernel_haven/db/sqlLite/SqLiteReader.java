@@ -90,7 +90,7 @@ public class SqLiteReader implements ITableReader {
         }
         
         if (columns.isEmpty()) {
-            throw new IOException(getTableName() + " has no columns");
+            throw new IOException(getTableName() + " has no columns or doesn't exist");
         }
         
         header = new String[columns.size()];
