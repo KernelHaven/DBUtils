@@ -227,8 +227,16 @@ public class SqLiteCollectionTest {
         while ((row = reader.readNextRow()) != null) {
             assertThat(reader.getLineNumber(), is(rowIndex + 1));
             
-            Assert.assertEquals("Unexpected value in cell [0, 0]", expectedElements[rowIndex].getName(), row[0]);
-            Assert.assertEquals("Unexpected value in cell [0, 1]", expectedElements[rowIndex].getValue(), row[1]);
+            String expectedName = expectedElements[rowIndex].getName();
+            if (expectedName == null) {
+                expectedName = "";
+            }
+            String expectedValue = expectedElements[rowIndex].getValue();
+            if (expectedValue == null) {
+                expectedValue = "";
+            }
+            Assert.assertEquals("Unexpected value in cell [0, 0]", expectedName, row[0]);
+            Assert.assertEquals("Unexpected value in cell [0, 1]", expectedValue, row[1]);
             rowIndex++;
         }
         
@@ -516,6 +524,102 @@ public class SqLiteCollectionTest {
         try (SqLiteCollection db = new SqLiteCollection(new File(AllTests.TESTDATA, "testWriteBeforeHeader.sqlite"))) {
             try (ITableWriter out = db.getWriter("SomeTable")) {
                 out.writeRow("Some", "Row");
+            }
+        }
+    }
+    
+    /**
+     * Tests that writing and reading <code>null</code> values works as expected with
+     * {@link SqLiteWriter#writeRow(Object...)}.
+     */
+    @Test
+    public void testWriteAndReadNullRows() {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testWriteAndReadNullRows.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        ITableReader reader = null;
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
+            ITableWriter writer = sqLiteDB.getWriter("Test")) {
+            
+            writer.writeHeader("First Name", "Last Name");
+            writer.writeRow("Donald", "Duck");
+            writer.writeRow("Scrooge", null);
+            writer.writeRow("Daisy", "Duck");
+            
+            writer.close();
+            
+            reader = sqLiteDB.getReader("Test");
+            
+            assertThat(reader.getLineNumber(), is(0));
+            
+            if (OLD_STYLE_IDENTIFIER_SQLIFY) {
+                assertThat(reader.readNextRow(), is(new String[] {"Test_First_Name", "Test_Last_Name"}));
+            } else {
+                assertThat(reader.readNextRow(), is(new String[] {"First Name", "Last Name"}));
+            }
+            assertThat(reader.getLineNumber(), is(0)); // header is not an SQL row
+            
+            assertThat(reader.readNextRow(), is(new String[] {"Donald", "Duck"}));
+            assertThat(reader.getLineNumber(), is(1));
+            assertThat(reader.readNextRow(), is(new String[] {"Scrooge", ""}));
+            assertThat(reader.getLineNumber(), is(2));
+            assertThat(reader.readNextRow(), is(new String[] {"Daisy", "Duck"}));
+            assertThat(reader.getLineNumber(), is(3));
+
+            assertThat(reader.readNextRow(), nullValue());
+            
+        } catch (IOException exc) {
+            exc.printStackTrace();
+            Assert.fail(exc.toString());
+        } finally {
+            if (null != reader) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+    
+    /**
+     * Tests that writing and reading <code>null</code> values works as expected with
+     * {@link SqLiteWriter#writeObject(Object)}.
+     */
+    @Test
+    public void testWriteAndReadNullObject() {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testWriteAndReadNullObject.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        ITableReader reader = null;
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
+            ITableWriter writer = sqLiteDB.getWriter("Test")) {
+            
+            TestData elem1 = new TestData("element1", "value1");
+            TestData elem2 = new TestData("element2", null);
+            writer.writeObject(elem1);
+            writer.writeObject(elem2);
+            writer.close();
+            
+            reader = sqLiteDB.getReader("Test");
+            
+            assertContent(reader, "Test", elem1, elem2);
+            
+        } catch (IOException exc) {
+            Assert.fail(exc.toString());
+        } finally {
+            if (null != reader) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }

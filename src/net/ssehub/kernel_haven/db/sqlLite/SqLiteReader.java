@@ -147,7 +147,11 @@ public class SqLiteReader implements ITableReader {
                     result = new String[nColumns];
                     
                     for (int i = 0; i < result.length; i++) {
-                        result[i] = resultSet.getString((i + 1));
+                        String value = resultSet.getString(i + 1);
+                        if (value == null) {
+                            value = "";
+                        }
+                        result[i] = value;
                     }
                 }
                 

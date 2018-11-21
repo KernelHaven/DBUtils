@@ -110,7 +110,8 @@ public class SqLiteWriter extends AbstractTableWriter {
         
         for (int i = 0; i < columns.length; i++) {
             try {
-                sqlInsertStatement.setString((i + 1), columns[i].toString());
+                String value = columns[i] != null ? columns[i].toString() : null;
+                sqlInsertStatement.setString((i + 1), value);
             } catch (SQLException e) {
                 throw new IOException("Could not prepare statement " + i + " in " + sqlInsertQuery
                     + " with values: " + columns.toString() + " for: " + getTableName());
@@ -370,7 +371,7 @@ public class SqLiteWriter extends AbstractTableWriter {
             
             String[] strings = new String[values.length];
             for (int i = 0; i < values.length; i++) {
-                strings[i] = values[i] != null ? values[i].toString() : "";
+                strings[i] = values[i] != null ? values[i].toString() : null;
             }
             
             sqlInsertStatement1.setString(1, strings[0]);
