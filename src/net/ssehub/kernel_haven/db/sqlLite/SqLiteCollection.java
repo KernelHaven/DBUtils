@@ -3,10 +3,13 @@ package net.ssehub.kernel_haven.db.sqlLite;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.sqlite.SQLiteConfig;
+import org.sqlite.SQLiteConfig.Encoding;
+import org.sqlite.SQLiteConfig.SynchronousMode;
 
 import net.ssehub.kernel_haven.config.Configuration;
 import net.ssehub.kernel_haven.db.AbstractSqlTableCollection;
@@ -64,8 +67,12 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
         Connection con;
         String url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
         try {
-            // DB parameters: Create a connection to the database
-            con = DriverManager.getConnection(url);
+            SQLiteConfig config = new SQLiteConfig();
+            config.enforceForeignKeys(true);
+            config.setSynchronous(SynchronousMode.OFF);
+            config.setEncoding(Encoding.UTF_8);
+            
+            con = config.createConnection(url);
             LOGGER.logDebug2("SQLite connection has been established for file: ", dbFile.getAbsolutePath());
         } catch (SQLException exc) {
             throw new IOException("Could not establish connection to: " + dbFile.getAbsolutePath(), exc);
