@@ -69,6 +69,12 @@ public class SqLiteWriter extends AbstractTableWriter {
     
     @Override
     public void writeHeader(@Nullable Object /*@NonNull*/ ... fields) throws IOException {
+        if (sqlInsertStatement1 != null || sqlInsertStatement2 != null) {
+            throw new IOException("Can't mix writeObject() and writeHeader()");
+        }
+        if (sqlInsertStatement != null) {
+            throw new IOException("Can't call writeHeader() twice");
+        }
         if (fields.length < 1) {
             throw new IOException("Can't create a table with no columns");
         }
@@ -149,6 +155,10 @@ public class SqLiteWriter extends AbstractTableWriter {
             // normal handling for non-relations
             super.writeAnnotationHeader(metadata);
             return;
+        }
+        
+        if (sqlInsertStatement != null) {
+            throw new IOException("Can't mix writeHeader() and writeObject()");
         }
         
         // special handling for relations

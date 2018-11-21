@@ -758,5 +758,93 @@ public class SqLiteCollectionTest {
             }
         }
     }
+    
+    /**
+     * Tests that mixing writeHeader and writeObject correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testMixWriteObjectAndWriteHeader() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testMixWriteObjectAndWriteHeader.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+                out.writeObject(new TestData("A", "B"));
+                out.writeHeader("Column1", "Column2");
+            }
+        }
+    }
+    
+    /**
+     * Tests that mixing writeHeader and writeObject correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testMixWriteHeaderAndWriteObject() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testMixWriteHeaderAndWriteObject.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+                out.writeHeader("Column1", "Column2");
+                out.writeObject(new TestData("A", "B"));
+            }
+        }
+    }
+    
+    /**
+     * Tests that mixing writeHeader and writeObject correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testMixWriteRelationalObjectAndWriteHeader() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testMixWriteRelationalObjectAndWriteHeader.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+                out.writeObject(new RelationData("A", "B"));
+                out.writeHeader("Column1", "Column2");
+            }
+        }
+    }
+    
+    /**
+     * Tests that mixing writeHeader and writeObject correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testMixWriteHeaderAndWriteRelationalObject() throws IOException {
+        // Delete generated file at the beginning of the test to allow debugging of the DB.
+        File tmpFile = new File(AllTests.TESTDATA, "testMixWriteHeaderAndWriteRelationalObject.sqlite");
+        if (tmpFile.exists()) {
+            tmpFile.delete();
+        }
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+                out.writeHeader("Column1", "Column2");
+                out.writeObject(new RelationData("A", "B"));
+            }
+        }
+    }
 
 }
