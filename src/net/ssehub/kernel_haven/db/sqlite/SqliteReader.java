@@ -68,20 +68,20 @@ public class SqliteReader implements ITableReader {
      * {@link #nColumns}).
      * </p>
      * <p>
-     * Selects all columns except for an optional ID column. However, if an ID column is present, the data is sorted
-     * by the ID. See {@link SqliteCollection#ID_FIELD}.
+     * Prepares and executes a SELECT statements, that selects all columns except for an optional ID column. However,
+     * if an ID column is present, the data is sorted by the ID. See {@link SqliteCollection#ID_FIELD}.
      * </p>
      * 
      * @throws IOException If setting up or executing the SQL query fails.
      */
     private void init() throws IOException {
-        List<String> columns = new ArrayList<>();
+        List<@NonNull String> columns = new ArrayList<>();
         boolean hasID = false;
         try {
             DatabaseMetaData metadata = con.getMetaData();
             ResultSet resultSet = metadata.getColumns(null, null, tableName, null);
             while (resultSet.next()) {
-                String name = resultSet.getString("COLUMN_NAME");
+                String name = notNull(resultSet.getString("COLUMN_NAME"));
     
                 if (!ID_FIELD.equals(name)) {
                     columns.add(name);
@@ -106,7 +106,7 @@ public class SqliteReader implements ITableReader {
         for (int i = 1; i < columns.size(); i++) {
             sql
                 .append(", ")
-                .append(escapeSqlIdentifier(notNull(columns.get(i))));
+                .append(escapeSqlIdentifier(columns.get(i)));
             header[i] = notNull(columns.get(i));
         }
         sql.append(" FROM ")
