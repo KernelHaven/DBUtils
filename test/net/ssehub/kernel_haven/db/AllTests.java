@@ -10,8 +10,8 @@ import net.ssehub.kernel_haven.db.sqlite.SqliteCollectionTest;
 
 /**
  * Test suite for this package and sub packages.
+ * 
  * @author El-Sharkawy
- *
  */
 @RunWith(Suite.class)
 @SuiteClasses({
