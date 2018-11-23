@@ -25,6 +25,7 @@ public class SqliteWriter extends AbstractTableWriter {
     private @NonNull Connection con;
     private @NonNull String dbName;
     private @NonNull String tableName;
+    private @NonNull String escapedTableName;
     
     // Normal writing
     private PreparedStatement sqlInsertStatement;
@@ -45,6 +46,7 @@ public class SqliteWriter extends AbstractTableWriter {
         this.con = con;
         this.dbName = dbName;
         this.tableName = tableName;
+        this.escapedTableName = escapeSqlIdentifier(tableName);
     }
 
     @Override
@@ -80,8 +82,6 @@ public class SqliteWriter extends AbstractTableWriter {
                     escapeSqlIdentifier(notNull(header.toString()))));
             insertQuestionMarks.append(", ?");
         }
-        
-        String escapedTableName = escapeSqlIdentifier(tableName); 
         
         String sqlDrop = String.format("DROP TABLE IF EXISTS %s;",
                 escapedTableName);
@@ -171,7 +171,6 @@ public class SqliteWriter extends AbstractTableWriter {
         
         // special handling for relations
         // create two tables: one ID content mapping, and one relation mapping (ID, ID)
-        String escapedTableName = escapeSqlIdentifier(tableName);
         String elementTableName = escapeSqlIdentifier(tableName + " Elements");
         
         @NonNull Object[] headers = metadata.getHeaders();
@@ -268,7 +267,7 @@ public class SqliteWriter extends AbstractTableWriter {
                 "CREATE TABLE %1$s (%2$s INTEGER, %3$s INTEGER, %4$s "
                 + "FOREIGN KEY(%2$s) REFERENCES %5$s(%6$s), FOREIGN KEY(%3$s) REFERENCES %5$s(%6$s));",
                 
-                /*1$*/ escapeSqlIdentifier(tableName),
+                /*1$*/ escapedTableName,
                 /*2$*/ escapedFirstHeader,
                 /*3$*/ escapedSecondHeader,
                 /*4$*/ extraColumns,
@@ -330,7 +329,7 @@ public class SqliteWriter extends AbstractTableWriter {
                 /*4$*/ escapedFirstHeader,
                 /*5$*/ escapedSecondHeader,
                 /*6$*/ optionalColumns,
-                /*7$*/ escapeSqlIdentifier(tableName),
+                /*7$*/ escapedTableName,
                 /*8$*/ elementTableName,
                 /*9$*/ ID_FIELD_ESCAPED
         );
