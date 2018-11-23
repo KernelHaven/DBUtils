@@ -1,6 +1,7 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
 import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.escapeSqlIdentifier;
+import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -49,6 +50,7 @@ public class SqLiteReader implements ITableReader {
      * 
      * @throws IOException If reading the given table fails.
      */
+    @SuppressWarnings("null") // resultSet and header are initialized in init()
     SqLiteReader(@NonNull Connection con, @NonNull String dbName, @NonNull String tableName) throws IOException {
         this.con = con;
         this.dbName = dbName;
@@ -92,15 +94,15 @@ public class SqLiteReader implements ITableReader {
             throw new IOException(getTableName() + " has no columns or doesn't exist");
         }
         
-        header = new String[columns.size()];
+        header = new  @NonNull String[columns.size()];
         
         StringBuffer sql = new StringBuffer("SELECT ");
-        sql.append(escapeSqlIdentifier(columns.get(0)));
-        header[0] = columns.get(0);
+        sql.append(escapeSqlIdentifier(notNull(columns.get(0))));
+        header[0] = notNull(columns.get(0));
         for (int i = 1; i < columns.size(); i++) {
             sql.append(", ");
-            sql.append(escapeSqlIdentifier(columns.get(i)));
-            header[i] = columns.get(i);
+            sql.append(escapeSqlIdentifier(notNull(columns.get(i))));
+            header[i] = notNull(columns.get(i));
         }
         sql.append(" FROM ");
         sql.append(escapeSqlIdentifier(tableName));
@@ -111,7 +113,7 @@ public class SqLiteReader implements ITableReader {
         
         String sqlSelectQuery = sql.toString();
         try {
-            resultSet = con.prepareStatement(sqlSelectQuery).executeQuery();
+            resultSet = notNull(con.prepareStatement(sqlSelectQuery).executeQuery());
             nColumns = columns.size();
             
         } catch (SQLException e) {
@@ -143,7 +145,7 @@ public class SqLiteReader implements ITableReader {
                 
                 if (resultSet.next()) {
                     rowIndex++;
-                    result = new String[nColumns];
+                    result = new @NonNull String[nColumns];
                     
                     for (int i = 0; i < result.length; i++) {
                         String value = resultSet.getString(i + 1);

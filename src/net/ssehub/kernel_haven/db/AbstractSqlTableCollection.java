@@ -1,5 +1,7 @@
 package net.ssehub.kernel_haven.db;
 
+import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -51,7 +53,7 @@ public abstract class AbstractSqlTableCollection implements ITableCollection {
             DatabaseMetaData md = con.getMetaData();
             ResultSet rs = md.getTables(null, null, "%", null);
             while (rs.next()) {
-                tables.add(rs.getString(3));
+                tables.add(notNull(rs.getString(3)));
             }
         } catch (SQLException exc) {
             throw new IOException("Could not determine tables names for: " + getDbName(), exc);
@@ -88,7 +90,7 @@ public abstract class AbstractSqlTableCollection implements ITableCollection {
             }
         }
         
-        return result.toString();
+        return notNull(result.toString());
     }
     
     /**
@@ -112,17 +114,20 @@ public abstract class AbstractSqlTableCollection implements ITableCollection {
      * @return A legal identifier based on the provided string.
      */
     public static @NonNull String sqlifyIdentifier(@NonNull String tableName, @Nullable String columName) {
+        @NonNull String identifier;
         if (OLD_STYLE_IDENTIFIER_SQLIFY) {
             if (columName != null) {
                 // for column names, the old style prefixed the table name
-                columName = tableName + '_' + columName;
+                identifier = tableName + '_' + columName;
             } else {
-                columName = tableName;
+                identifier = tableName;
             }
-            columName = oldSqlifyIdentifier(columName);
+            identifier = oldSqlifyIdentifier(identifier);
+        } else {
+            identifier = columName != null ? columName : tableName;
         }
         
-        return escapeSqlIdentifier(columName != null ? columName : tableName);
+        return escapeSqlIdentifier(identifier);
     }
     
 }

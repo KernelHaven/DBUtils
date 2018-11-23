@@ -1,5 +1,7 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
+import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
@@ -72,7 +74,7 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
             config.setSynchronous(SynchronousMode.OFF);
             config.setEncoding(Encoding.UTF_8);
             
-            con = config.createConnection(url);
+            con = notNull(config.createConnection(url));
             LOGGER.logDebug2("SQLite connection has been established for file: ", dbFile.getPath());
         } catch (SQLException exc) {
             throw new IOException("Could not establish connection to: " + dbFile.getPath(), exc);
@@ -103,7 +105,7 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
 
     @Override
     protected @NonNull String getDbName() {
-        return dbFile.getPath();
+        return notNull(dbFile.getPath());
     }
     
     /**

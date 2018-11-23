@@ -1,6 +1,7 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
 import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.sqlifyIdentifier;
+import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -78,7 +79,10 @@ public class SqLiteWriter extends AbstractTableWriter {
         
         for (int i = 0; i < fields.length; i++) {
             sqlCreate.append(", ");
-            String columnName = sqlifyIdentifier(tableName, fields[i].toString());
+            if (fields[i] == null) {
+                throw new IOException("Table header null is not allowed");
+            }
+            String columnName = sqlifyIdentifier(tableName, notNull(fields[i]).toString());
             sqlCreate.append(columnName);
             sqlCreate.append(" TEXT");
             
@@ -106,7 +110,7 @@ public class SqLiteWriter extends AbstractTableWriter {
         
         for (int i = 0; i < columns.length; i++) {
             try {
-                String value = columns[i] != null ? columns[i].toString() : null;
+                String value = columns[i] != null ? notNull(columns[i]).toString() : null;
                 sqlInsertStatement.setString((i + 1), value);
             } catch (SQLException e) {
                 throw new IOException("Could not prepare statement " + i + " in " + sqlInsertQuery

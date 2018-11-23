@@ -28,9 +28,11 @@ import net.ssehub.kernel_haven.util.null_checks.NonNull;
 
 /**
  * Tests the {@link SqLiteCollection}.
+ * 
+ * @author Adam
  * @author El-Sharkawy
- *
  */
+@SuppressWarnings("null")
 public class SqLiteCollectionTest {
     
     private static final File TMP_DIR = new File(AllTests.TESTDATA, "tmp");
@@ -810,6 +812,24 @@ public class SqLiteCollectionTest {
             try (ITableWriter out = sqLiteDB.getWriter("Table")) {
                 out.writeHeader("Column1", "Column2");
                 out.writeObject(new RelationData("A", "B"));
+            }
+        }
+    }
+    
+    /**
+     * Tests writing a header with a null value.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testWriteNullHeader() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testWriteNullHeader.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+                out.writeHeader("Column1", null, "Column3");
             }
         }
     }
