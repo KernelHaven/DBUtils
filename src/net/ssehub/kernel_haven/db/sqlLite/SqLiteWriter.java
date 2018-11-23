@@ -1,5 +1,6 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
+import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.escapeSqlIdentifier;
 import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.sqlifyIdentifier;
 import static net.ssehub.kernel_haven.db.sqlLite.SqLiteCollection.ID_FIELD_ESCAPED;
 import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
@@ -66,40 +67,46 @@ public class SqLiteWriter extends AbstractTableWriter {
         if (fields.length < 1) {
             throw new IOException("Can't create a table with no columns");
         }
-        
-        // Create the table containing the element definitions
-        StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
-        sqlCreate.append(sqlifyIdentifier(tableName, null));
-        sqlCreate.append(" (");
-        sqlCreate.append(ID_FIELD_ESCAPED).append(" INTEGER PRIMARY KEY");
-        
-        StringBuffer sqlInsert = new StringBuffer("INSERT INTO ");
-        sqlInsert.append(sqlifyIdentifier(tableName, null));
-        sqlInsert.append(" VALUES (");
-        sqlInsert.append("NULL");
-        
+
+        StringBuilder headersString = new StringBuilder();
+        StringBuilder insertQuestionMarks = new StringBuilder();
         for (int i = 0; i < fields.length; i++) {
-            sqlCreate.append(", ");
             if (fields[i] == null) {
                 throw new IOException("Table header null is not allowed");
             }
-            String columnName = sqlifyIdentifier(tableName, notNull(fields[i]).toString());
-            sqlCreate.append(columnName);
-            sqlCreate.append(" TEXT");
             
-            sqlInsert.append(", ?");
+            headersString.append(String.format(", %s TEXT",
+                    sqlifyIdentifier(tableName, notNull(fields[i]).toString())));
+            insertQuestionMarks.append(", ?");
         }
         
-        sqlCreate.append(");");
-        sqlInsert.append(");");
+        String escapedTableName = sqlifyIdentifier(tableName, null); 
+        
+        String sqlDrop = String.format("DROP TABLE IF EXISTS %s;",
+                escapedTableName);
+        
+        String sqlCreate = String.format("CREATE TABLE %s (%s INTEGER PRIMAR KEY %s);",
+                escapedTableName,
+                ID_FIELD_ESCAPED,
+                headersString.toString());
+        
+        // use NULL for primary key, so it is auto-incremented
+        String sqlInsert = String.format("INSERT INTO %s VALUES (NULL %s);",
+                escapedTableName,
+                insertQuestionMarks);
+        
         try {
-            con.prepareStatement("DROP TABLE IF EXISTS " + sqlifyIdentifier(tableName, null) + ";").execute();
-            con.prepareStatement(sqlCreate.toString()).execute();
-            
-            sqlInsertQuery = sqlInsert.toString();
-            sqlInsertStatement = con.prepareStatement(sqlInsertQuery);
+            con.prepareStatement(sqlDrop).execute();
+            con.prepareStatement(sqlCreate).execute();
         } catch (SQLException exc) {
-            throw new IOException("Could not prepare SQL queries", exc);
+            throw new IOException("Could not create table", exc);
+        }
+         
+        try {
+            sqlInsertStatement = con.prepareStatement(sqlInsert);
+            sqlInsertQuery = sqlInsert;
+        } catch (SQLException exc) {
+            throw new IOException("Could not prepare SQL insert query", exc);
         }
     }
     
@@ -154,51 +161,43 @@ public class SqLiteWriter extends AbstractTableWriter {
         
         // special handling for relations
         // create two tables: one ID content mapping, and one relation mapping (ID, ID)
+        String escapedTableName = sqlifyIdentifier(tableName, null);
         String elementTableName = sqlifyIdentifier(tableName + " Elements", null);
-        String columnName = createElementsTable(elementTableName);
         
         @NonNull Object[] headers = metadata.getHeaders();
         if (headers.length < 2) {
             throw new IllegalArgumentException("Relation TableRows must have at least 2 TableElements");
         }
+        
+        String pkColumnName = createElementsTable(elementTableName);
         createRelationTable(elementTableName, headers);
         
         // Create view combining the two tables
-        createView(elementTableName, columnName, headers);
+        createView(elementTableName, pkColumnName, headers);
         
-        StringBuffer sqlInsert1 = new StringBuffer();
-        sqlInsert1.append("INSERT OR IGNORE INTO ");
-        sqlInsert1.append(elementTableName);
-        sqlInsert1.append(" VALUES (NULL, ?); ");
+        String sqlInsert1 = String.format("INSERT OR IGNORE INTO %s VALUES (NULL, ?);",
+                elementTableName);
         
-        StringBuffer sqlInsert2 = new StringBuffer();
-        sqlInsert2.append("INSERT INTO ");
-        sqlInsert2.append(sqlifyIdentifier(tableName, null));
-        sqlInsert2.append(" VALUES (");
-        
-        sqlInsert2.append("(SELECT ").append(ID_FIELD_ESCAPED).append(" FROM ");
-        sqlInsert2.append(elementTableName);
-        sqlInsert2.append(" WHERE ");
-        sqlInsert2.append(columnName);
-        sqlInsert2.append(" = ?), ");
-        
-        sqlInsert2.append("(SELECT ").append(ID_FIELD_ESCAPED).append(" FROM ");
-        sqlInsert2.append(elementTableName);
-        sqlInsert2.append(" WHERE ");
-        sqlInsert2.append(columnName);
-        sqlInsert2.append(" = ?)");
-        
+        StringBuilder insertQuestionMarks = new StringBuilder();
         for (int i = 2; i < headers.length; i++) {
-            sqlInsert2.append(", ?");
+            insertQuestionMarks.append(", ?");
         }
         
-        sqlInsert2.append(");");
+        String idQuery = String.format("(SELECT %s FROM %s WHERE %s = ?)",
+                ID_FIELD_ESCAPED,
+                elementTableName,
+                pkColumnName);
+        
+        String sqlInsert2 = String.format("INSERT INTO %1$s VALUES (%2$s, %2$s %3$s);",
+                escapedTableName,
+                idQuery,
+                insertQuestionMarks.toString());
         
         try {
-            sqlInsertStatement1 = con.prepareStatement(sqlInsert1.toString());
+            sqlInsertStatement1 = con.prepareStatement(sqlInsert1);
             sqlInsertStatement2 = con.prepareStatement(sqlInsert2.toString());
         } catch (SQLException exc) {
-            throw new IOException("Could not prepare insert statement", exc);
+            throw new IOException("Could not prepare insert statements", exc);
         }
     }
 
@@ -213,67 +212,52 @@ public class SqLiteWriter extends AbstractTableWriter {
             @NonNull Object @NonNull [] headers) throws IOException {
         
         // Handling of optional, non-relational elements starting at 3rd index of header
-        StringBuffer optionalColumns = null;
+        StringBuffer optionalColumns = new StringBuffer();
         if (headers.length > 2) {
-            optionalColumns = new StringBuffer();
             for (int i = 2; i < headers.length; i++) {
-                optionalColumns.append(", ");
-                optionalColumns.append(sqlifyIdentifier(tableName, headers[i].toString()));
+                optionalColumns
+                    .append(", ")
+                    .append(sqlifyIdentifier(tableName, headers[i].toString()));
             }
         }
         
+        String escapedFirstHeader = sqlifyIdentifier(tableName, headers[0].toString()); 
+        String escapedSecondHeader = sqlifyIdentifier(tableName, headers[1].toString()); 
         
         // As we join two times the same table, we have to rename columns (and can't join in one step)
         // Inner select statement
-        StringBuffer innerSelect = new StringBuffer("SELECT ");
-        innerSelect.append(columnName);
-        innerSelect.append(" AS ");
-        innerSelect.append(sqlifyIdentifier(tableName, headers[0].toString()));
-        innerSelect.append(", ");
-        innerSelect.append(sqlifyIdentifier(tableName, headers[1].toString()));
-        if (null != optionalColumns) {
-            innerSelect.append(optionalColumns);
-        }
-        innerSelect.append(" FROM ");
-        innerSelect.append(sqlifyIdentifier(tableName, null));
-        innerSelect.append(" JOIN ");
-        innerSelect.append(elementTableName);
-        innerSelect.append(" ON ");
-        innerSelect.append(sqlifyIdentifier(tableName, null));
-        innerSelect.append(".");
-        innerSelect.append(sqlifyIdentifier(tableName, headers[0].toString()));
-        innerSelect.append(" = ");
-        innerSelect.append(elementTableName);
-        innerSelect.append(".").append(ID_FIELD_ESCAPED);
+        String innerSelect = String.format(
+                "SELECT %1$s AS %2$s, %3$s %4$s FROM %5$s JOIN %6$s ON %5$s.%2$s = %6$s.%7$s",
+                
+                /*1$*/ columnName,
+                /*2$*/ escapedFirstHeader,
+                /*3$*/ escapedSecondHeader,
+                /*4$*/ optionalColumns,
+                /*5$*/ sqlifyIdentifier(tableName, null),
+                /*6$*/ elementTableName,
+                /*7$*/ ID_FIELD_ESCAPED
+        );
         
         // Outer select statement
-        StringBuffer outerSelect = new StringBuffer("SELECT ");
-        outerSelect.append(sqlifyIdentifier(tableName, headers[0].toString()));
-        outerSelect.append(", ");
-        outerSelect.append(columnName);
-        outerSelect.append(" AS ");
-        outerSelect.append(sqlifyIdentifier(tableName, headers[1].toString()));
-        if (null != optionalColumns) {
-            outerSelect.append(optionalColumns);
-        }
-        outerSelect.append(" FROM (");
-        outerSelect.append(innerSelect);
-        outerSelect.append(") AS INNER_JOIN JOIN ");
-        outerSelect.append(elementTableName);
-        outerSelect.append(" ON INNER_JOIN");
-        outerSelect.append(".");
-        outerSelect.append(sqlifyIdentifier(tableName, headers[1].toString()));
-        outerSelect.append(" = ");
-        outerSelect.append(elementTableName);
-        outerSelect.append(".").append(ID_FIELD_ESCAPED);
+        String outerSelect = String.format(
+                "SELECT %1$s, %2$s AS %3$s %4$s FROM (%5$s) AS %8$s JOIN %6$s ON %8$s.%3$s = %6$s.%7$s",
+                
+                /*1$*/ escapedFirstHeader,
+                /*2$*/ columnName,
+                /*3$*/ escapedSecondHeader,
+                /*4$*/ optionalColumns,
+                /*5$*/ innerSelect,
+                /*6$*/ elementTableName,
+                /*7$*/ ID_FIELD_ESCAPED,
+                /*8$*/ escapeSqlIdentifier("inner_join")
+        );
         
-        StringBuffer sqlCreateView = new StringBuffer("CREATE VIEW IF NOT EXISTS ");
-        sqlCreateView.append(sqlifyIdentifier(tableName + " View", null));
-        sqlCreateView.append(" AS ");
-        sqlCreateView.append(outerSelect);
+        String sqlCreateView = String.format("CREATE VIEW IF NOT EXISTS %s AS %s;",
+                sqlifyIdentifier(tableName + " View", null),
+                outerSelect);
+        
         try {
-            PreparedStatement sqlStatement = con.prepareStatement(sqlCreateView.toString());
-            sqlStatement.execute();
+            con.prepareStatement(sqlCreateView).execute();
         } catch (SQLException exc) {
             throw new IOException("Could not create view", exc);
         }
@@ -289,39 +273,29 @@ public class SqLiteWriter extends AbstractTableWriter {
     private void createRelationTable(@NonNull String elementTableName, @NonNull Object @NonNull [] headers)
             throws IOException {
         
-        StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
-        sqlCreate.append(sqlifyIdentifier(tableName, null));
-        sqlCreate.append(" (");
+        String escapedFirstHeader = sqlifyIdentifier(tableName, headers[0].toString());
+        String escapedSecondHeader = sqlifyIdentifier(tableName, headers[1].toString());
         
-        sqlCreate.append(sqlifyIdentifier(tableName, headers[0].toString()));
-        sqlCreate.append(" INTEGER, ");
-        
-        sqlCreate.append(sqlifyIdentifier(tableName, headers[1].toString()));
-        sqlCreate.append(" INTEGER, ");
-        
+        StringBuilder extraColumns = new StringBuilder();
         for (int i = 2; i < headers.length; i++) {
-            String columnName = sqlifyIdentifier(tableName, headers[i].toString());
-            sqlCreate.append(columnName);
-            sqlCreate.append(" TEXT, ");
+            extraColumns.append(String.format("%s TEXT, ",
+                    sqlifyIdentifier(tableName, headers[i].toString())));
         }
         
-        sqlCreate.append(" FOREIGN KEY(");
-        sqlCreate.append(sqlifyIdentifier(tableName, headers[0].toString()));
-        sqlCreate.append(") REFERENCES ");
-        sqlCreate.append(elementTableName);
-        sqlCreate.append(" (").append(ID_FIELD_ESCAPED).append("),");
-        
-        sqlCreate.append(" FOREIGN KEY(");
-        sqlCreate.append(sqlifyIdentifier(tableName, headers[1].toString()));
-        sqlCreate.append(") REFERENCES ");
-        sqlCreate.append(elementTableName);
-        sqlCreate.append(" (").append(ID_FIELD_ESCAPED).append(")");
-        
-        sqlCreate.append(");");
+        String sqlCreate = String.format(
+                "CREATE TABLE %1$s (%2$s INTEGER, %3$s INTEGER, %4$s "
+                + "FOREIGN KEY(%2$s) REFERENCES %5$s(%6$s), FOREIGN KEY(%3$s) REFERENCES %5$s(%6$s));",
+                
+                /*1$*/ sqlifyIdentifier(tableName, null),
+                /*2$*/ escapedFirstHeader,
+                /*3$*/ escapedSecondHeader,
+                /*4$*/ extraColumns,
+                /*5$*/ elementTableName,
+                /*6$*/ ID_FIELD_ESCAPED
+        );
         
         try {
-            PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
-            sqlStatement.execute();
+            con.prepareStatement(sqlCreate).execute();
         } catch (SQLException exc) {
             throw new IOException("Could not create relation table", exc);
         }
@@ -334,24 +308,19 @@ public class SqLiteWriter extends AbstractTableWriter {
      * @throws IOException If the table could not be created.
      */
     private @NonNull String createElementsTable(@NonNull String elementTableName) throws IOException {
-        StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
-        sqlCreate.append(elementTableName);
-        sqlCreate.append(" (");
-        sqlCreate.append(ID_FIELD_ESCAPED).append(" INTEGER PRIMARY KEY");
         
-        sqlCreate.append(", ");
         String columnName = sqlifyIdentifier(tableName, "Element");
-        sqlCreate.append(columnName);
-        sqlCreate.append(" TEXT,");
-        sqlCreate.append(" UNIQUE(");
-        sqlCreate.append(columnName);
-        sqlCreate.append(")");
         
-        sqlCreate.append(");");
+        String sqlCreate = String.format(
+                "CREATE TABLE %1$s (%2$s INTEGER PRIMARY KEY, %3$s TEXT, UNIQUE(%3$s));",
+                
+                /*1$*/ elementTableName,
+                /*2$*/ ID_FIELD_ESCAPED,
+                /*3$*/ columnName
+        );
         
         try {
-            PreparedStatement sqlStatement = con.prepareStatement(sqlCreate.toString());
-            sqlStatement.execute();
+            con.prepareStatement(sqlCreate).execute();
         } catch (SQLException exc) {
             throw new IOException("Could not create element table", exc);
         }

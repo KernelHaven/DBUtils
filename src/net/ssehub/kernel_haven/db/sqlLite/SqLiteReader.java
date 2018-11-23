@@ -98,16 +98,18 @@ public class SqLiteReader implements ITableReader {
         
         header = new  @NonNull String[columns.size()];
         
-        StringBuffer sql = new StringBuffer("SELECT ");
-        sql.append(escapeSqlIdentifier(notNull(columns.get(0))));
+        StringBuffer sql = new StringBuffer()
+                .append("SELECT ")
+                .append(escapeSqlIdentifier(notNull(columns.get(0))));
         header[0] = notNull(columns.get(0));
         for (int i = 1; i < columns.size(); i++) {
-            sql.append(", ");
-            sql.append(escapeSqlIdentifier(notNull(columns.get(i))));
+            sql
+                .append(", ")
+                .append(escapeSqlIdentifier(notNull(columns.get(i))));
             header[i] = notNull(columns.get(i));
         }
-        sql.append(" FROM ");
-        sql.append(escapeSqlIdentifier(tableName));
+        sql.append(" FROM ")
+            .append(escapeSqlIdentifier(tableName));
         
         if (hasID) {
             sql.append(" ORDER BY " + ID_FIELD_ESCAPED);
