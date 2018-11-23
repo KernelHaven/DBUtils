@@ -59,8 +59,6 @@ public class SqLiteCollectionTest {
     
     /**
      * Used for writing/reading data into a SQLite DB.
-     * @author El-Sharkawy
-     *
      */
     @TableRow
     public static class TestData {

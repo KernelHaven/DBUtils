@@ -179,11 +179,11 @@ public class SqLiteWriter extends AbstractTableWriter {
             throw new IllegalArgumentException("Relation TableRows must have at least 2 TableElements");
         }
         
-        String pkColumnName = createElementsTable(elementTableName);
+        String elementColumnName = createElementsTable(elementTableName);
         createRelationTable(elementTableName, headers);
         
         // Create view combining the two tables
-        createView(elementTableName, pkColumnName, headers);
+        createView(elementTableName, elementColumnName, headers);
         
         String sqlInsert1 = String.format("INSERT OR IGNORE INTO %s VALUES (NULL, ?);",
                 elementTableName);
@@ -196,7 +196,7 @@ public class SqLiteWriter extends AbstractTableWriter {
         String idQuery = String.format("(SELECT %s FROM %s WHERE %s = ?)",
                 ID_FIELD_ESCAPED,
                 elementTableName,
-                pkColumnName);
+                elementColumnName);
         
         String sqlInsert2 = String.format("INSERT INTO %1$s VALUES (%2$s, %2$s %3$s);",
                 escapedTableName,
@@ -210,12 +210,89 @@ public class SqLiteWriter extends AbstractTableWriter {
             throw new IOException("Could not prepare insert statements", exc);
         }
     }
+    
+    /**
+     * Part of {@link #writeAnnotationHeader(TableRowMetadata)}: Writes first table, containing the primary elements.
+     * 
+     * @param elementTableName The name of the table to create. Must be an already escaped SQL identifier.
+     * 
+     * @return The column name where the element data is stored. An already escaped SQL identifier.
+     * 
+     * @throws IOException If the table could not be created.
+     */
+    private @NonNull String createElementsTable(@NonNull String elementTableName) throws IOException {
+        
+        String columnName = escapeSqlIdentifier("Element");
+        
+        String sqlCreate = String.format(
+                "CREATE TABLE %1$s (%2$s INTEGER PRIMARY KEY, %3$s TEXT, UNIQUE(%3$s));",
+                
+                /*1$*/ elementTableName,
+                /*2$*/ ID_FIELD_ESCAPED,
+                /*3$*/ columnName
+        );
+        
+        try {
+            con.prepareStatement(sqlCreate).execute();
+        } catch (SQLException exc) {
+            throw new IOException("Could not create element table", exc);
+        }
+        
+        return columnName;
+    }
+    
+    /**
+     * Part of {@link #writeAnnotationHeader(TableRowMetadata)}: Writes 2nd table, containing the relations between
+     * elements of the first table (see {@link #createElementsTable(String)}).
+     * 
+     * @param elementTableName The name of the first table, which is used to reference elements as foreign key. Must be
+     *      an already escaped SQL identifier.
+     * @param headers A at least 2-dim array containing the column names of the relationship. First two elements are
+     *      the relation data; additional columns are extra data.
+     * 
+     * @throws IOException If the table could not be created.
+     */
+    private void createRelationTable(@NonNull String elementTableName, @NonNull Object @NonNull [] headers)
+            throws IOException {
+        
+        String escapedFirstHeader = escapeSqlIdentifier(notNull(headers[0].toString()));
+        String escapedSecondHeader = escapeSqlIdentifier(notNull(headers[1].toString()));
+        
+        StringBuilder extraColumns = new StringBuilder();
+        for (int i = 2; i < headers.length; i++) {
+            extraColumns.append(String.format("%s TEXT, ",
+                    escapeSqlIdentifier(notNull(headers[i].toString()))));
+        }
+        
+        String sqlCreate = String.format(
+                "CREATE TABLE %1$s (%2$s INTEGER, %3$s INTEGER, %4$s "
+                + "FOREIGN KEY(%2$s) REFERENCES %5$s(%6$s), FOREIGN KEY(%3$s) REFERENCES %5$s(%6$s));",
+                
+                /*1$*/ escapeSqlIdentifier(tableName),
+                /*2$*/ escapedFirstHeader,
+                /*3$*/ escapedSecondHeader,
+                /*4$*/ extraColumns,
+                /*5$*/ elementTableName,
+                /*6$*/ ID_FIELD_ESCAPED
+        );
+        
+        try {
+            con.prepareStatement(sqlCreate).execute();
+        } catch (SQLException exc) {
+            throw new IOException("Could not create relation table", exc);
+        }
+    }
 
     /**
      * Part of {@link #writeAnnotationHeader(TableRowMetadata)}: Creates a view combining both tables.
-     * @param elementTableName The name of the first table, which is used to reference elements as foreign key.
-     * @param columnName The key column of the first table
-     * @param headers A at least 2-dim array containing the names of the relationships.
+     * 
+     * @param elementTableName The name of the first table, which is used to convert IDs to element values. Must be an
+     *      already escaped SQL identifier.
+     * @param columnName The column name where the data of the relation elements is stored. Must be an already escaped
+     *      SQL identifier.
+     * @param headers A at least 2-dim array containing the column names of the relationship. First two elements are
+     *      the relation data; additional columns are extra data.
+     * 
      * @throws IOException If the view could not be created.
      */
     private void createView(@NonNull String elementTableName, @NonNull String columnName,
@@ -269,71 +346,6 @@ public class SqLiteWriter extends AbstractTableWriter {
         }
     }
 
-    /**
-     * Part of {@link #writeAnnotationHeader(TableRowMetadata)}: Writes 2nd table, containing the relations between
-     * elements of the first table (see {@link #createElementsTable(String)}).
-     * @param elementTableName The name of the first table, which is used to reference elements as foreign key.
-     * @param headers A at least 2-dim array containing the names of the relationships.
-     * @throws IOException If the table could not be created.
-     */
-    private void createRelationTable(@NonNull String elementTableName, @NonNull Object @NonNull [] headers)
-            throws IOException {
-        
-        String escapedFirstHeader = escapeSqlIdentifier(notNull(headers[0].toString()));
-        String escapedSecondHeader = escapeSqlIdentifier(notNull(headers[1].toString()));
-        
-        StringBuilder extraColumns = new StringBuilder();
-        for (int i = 2; i < headers.length; i++) {
-            extraColumns.append(String.format("%s TEXT, ",
-                    escapeSqlIdentifier(notNull(headers[i].toString()))));
-        }
-        
-        String sqlCreate = String.format(
-                "CREATE TABLE %1$s (%2$s INTEGER, %3$s INTEGER, %4$s "
-                + "FOREIGN KEY(%2$s) REFERENCES %5$s(%6$s), FOREIGN KEY(%3$s) REFERENCES %5$s(%6$s));",
-                
-                /*1$*/ escapeSqlIdentifier(tableName),
-                /*2$*/ escapedFirstHeader,
-                /*3$*/ escapedSecondHeader,
-                /*4$*/ extraColumns,
-                /*5$*/ elementTableName,
-                /*6$*/ ID_FIELD_ESCAPED
-        );
-        
-        try {
-            con.prepareStatement(sqlCreate).execute();
-        } catch (SQLException exc) {
-            throw new IOException("Could not create relation table", exc);
-        }
-    }
-
-    /**
-     * Part of {@link #writeAnnotationHeader(TableRowMetadata)}: Writes first table, containing the primary elements.
-     * @param elementTableName The name of the table to create.
-     * @return The column name of the primary key elements.
-     * @throws IOException If the table could not be created.
-     */
-    private @NonNull String createElementsTable(@NonNull String elementTableName) throws IOException {
-        
-        String columnName = escapeSqlIdentifier("Element");
-        
-        String sqlCreate = String.format(
-                "CREATE TABLE %1$s (%2$s INTEGER PRIMARY KEY, %3$s TEXT, UNIQUE(%3$s));",
-                
-                /*1$*/ elementTableName,
-                /*2$*/ ID_FIELD_ESCAPED,
-                /*3$*/ columnName
-        );
-        
-        try {
-            con.prepareStatement(sqlCreate).execute();
-        } catch (SQLException exc) {
-            throw new IOException("Could not create element table", exc);
-        }
-        
-        return columnName;
-    }
-    
     @Override
     protected void writeAnnotationObject(@NonNull TableRowMetadata metadata, @NonNull Object object)
             throws IOException, IllegalArgumentException {
