@@ -116,6 +116,15 @@ public class SqLiteWriter extends AbstractTableWriter {
             throw new IOException("writeHeader() must be called before writeRow()");
         }
         
+        try {
+            int expectedParamCount = sqlInsertStatement.getParameterMetaData().getParameterCount();
+            if (columns.length != expectedParamCount) {
+                throw new IOException("Expected " + expectedParamCount + " elements, but got " + columns.length);
+            }
+        } catch (SQLException e) {
+            throw new IOException("Can't check insert statement", e);
+        }
+        
         for (int i = 0; i < columns.length; i++) {
             try {
                 String value = columns[i] != null ? notNull(columns[i]).toString() : null;

@@ -835,6 +835,44 @@ public class SqLiteCollectionTest {
     }
     
     /**
+     * Tests that trying to write a too long row correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testWriteTooLargeRow() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testWriteTooLargeRow.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+                out.writeHeader("Column1", "Column2", "Column3");
+                out.writeRow("Value1", "Value2", "Value3", "Value4");
+            }
+        }
+    }
+    
+    /**
+     * Tests that trying to write a too short row correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testWriteTooSmallRow() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testWriteTooSmallRow.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+                out.writeHeader("Column1", "Column2", "Column3");
+                out.writeRow("Value1", "Value2");
+            }
+        }
+    }
+    
+    /**
      * Tests reading an existing database.
      * 
      * @throws IOException unwanted.
