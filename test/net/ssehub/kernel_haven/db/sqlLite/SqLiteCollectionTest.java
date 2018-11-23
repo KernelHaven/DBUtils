@@ -873,6 +873,35 @@ public class SqLiteCollectionTest {
     }
     
     /**
+     * Tests that names with quotation marks (") are handled correctly.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testNamesWithQuotationMark() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testNamesWithQuotationMark.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+            
+            assertThat(sqLiteDB.getTableNames(), is(new HashSet<>()));
+            
+            try (ITableWriter out = sqLiteDB.getWriter("Some\"Table")) {
+                out.writeHeader("Column\"A", "Column\"B");
+                out.writeRow("A\"B", "C\"D");
+            }
+            
+            assertThat(sqLiteDB.getTableNames(), is(new HashSet<>(Arrays.asList("Some\"Table"))));
+            
+            try (ITableReader in = sqLiteDB.getReader("Some\"Table")) {
+                assertThat(in.readNextRow(), is(new String[] {"Column\"A", "Column\"B"}));
+                assertThat(in.readNextRow(), is(new String[] {"A\"B", "C\"D"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+        }
+    }
+    
+    /**
      * Tests reading an existing database.
      * 
      * @throws IOException unwanted.

@@ -101,7 +101,15 @@ public abstract class AbstractSqlTableCollection implements ITableCollection {
      * @return The escaped identifier.
      */
     public static @NonNull String escapeSqlIdentifier(@NonNull String identifier) {
-        return '"' + identifier + '"'; // TODO: escape " inside the string
+        StringBuilder str = new StringBuilder(identifier);
+        for (int i = 0; i < str.length(); i++) {
+            if (str.charAt(i) == '"') {
+                str.insert(i, '"');
+                i++; // skip inserted char at next iteration
+            }
+        }
+        
+        return '"' + str.toString() + '"';
     }
     
     /**
