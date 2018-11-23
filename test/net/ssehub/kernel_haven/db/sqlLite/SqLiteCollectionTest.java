@@ -14,9 +14,10 @@ import java.util.List;
 import java.util.Set;
 
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import net.ssehub.kernel_haven.AllTests;
+import net.ssehub.kernel_haven.db.AllTests;
 import net.ssehub.kernel_haven.util.io.ITableCollection;
 import net.ssehub.kernel_haven.util.io.ITableReader;
 import net.ssehub.kernel_haven.util.io.ITableWriter;
@@ -30,6 +31,29 @@ import net.ssehub.kernel_haven.util.null_checks.NonNull;
  *
  */
 public class SqLiteCollectionTest {
+    
+    private static final File TMP_DIR = new File(AllTests.TESTDATA, "tmp");
+    
+    /**
+     * Clears all *.sqlite files from the temporary directory.
+     * Delete generated files at the beginning of the tests to allow debugging of the DB.
+     * 
+     * @throws IOException If clearing fails.
+     */
+    @BeforeClass
+    public static void clearTmpDir() throws IOException {
+        if (!TMP_DIR.isDirectory()) {
+            TMP_DIR.mkdir();
+        }
+        
+        for (File f : TMP_DIR.listFiles()) {
+            if (f.getName().endsWith(".sqlite")) {
+                f.delete();
+            }
+        }
+        
+        assertThat(TMP_DIR.isDirectory(), is(true));
+    }
     
     /**
      * Used for writing/reading data into a SQLite DB.
@@ -76,11 +100,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testWriteAndReadObject() {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testWriteAndReadObject.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testWriteAndReadObject.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         ITableReader reader = null;
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
@@ -115,11 +136,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testWriteAndReadRows() {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testWriteAndReadRows.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testWriteAndReadRows.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         ITableReader reader = null;
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
@@ -170,11 +188,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testEscapedTableName() {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testEscapedTableName.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testEscapedTableName.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         String tableName = OLD_STYLE_IDENTIFIER_SQLIFY ? "Test_Table" : "Test Table";
         
@@ -355,13 +370,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testRelationStructure() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testRelationStructure.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
-        Assert.assertFalse("Test DB exist before test (but should be created during testing: "
-            + tmpFile.getAbsolutePath(), tmpFile.exists());
+        File tmpFile = new File(TMP_DIR, "testRelationStructure.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
             // Write relational data (will create an view)
@@ -402,13 +412,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testRelationStructureWithExtraElement() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testRelationStructureWithExtraElement.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
-        Assert.assertFalse("Test DB exist before test (but should be created during testing: "
-            + tmpFile.getAbsolutePath(), tmpFile.exists());
+        File tmpFile = new File(TMP_DIR, "testRelationStructureWithExtraElement.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
             // Write relational data (will create an view)
@@ -460,14 +465,8 @@ public class SqLiteCollectionTest {
         secondDataSet.add(new RelationData(firstDataSet.get(0).name, "C"));
         secondDataSet.add(new RelationData(firstDataSet.get(1).name, "C"));
         
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testHeterogeneousStructure.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
-        Assert.assertFalse("Test DB exist before test (but should be created during testing: "
-            + tmpFile.getAbsolutePath(), tmpFile.exists());
-        
+        File tmpFile = new File(TMP_DIR, "testHeterogeneousStructure.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         // Write data of two analyses into two tables
         try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
@@ -524,7 +523,7 @@ public class SqLiteCollectionTest {
      */
     @Test(expected = IOException.class)
     public void testWriteBeforeHeader() throws IOException {
-        try (SqLiteCollection db = new SqLiteCollection(new File(AllTests.TESTDATA, "testWriteBeforeHeader.sqlite"))) {
+        try (SqLiteCollection db = new SqLiteCollection(new File(TMP_DIR, "testWriteBeforeHeader.sqlite"))) {
             try (ITableWriter out = db.getWriter("SomeTable")) {
                 out.writeRow("Some", "Row");
             }
@@ -537,11 +536,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testWriteAndReadNullRows() {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testWriteAndReadNullRows.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testWriteAndReadNullRows.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         ITableReader reader = null;
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
@@ -594,11 +590,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testWriteAndReadNullObject() {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testWriteAndReadNullObject.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testWriteAndReadNullObject.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         ITableReader reader = null;
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
@@ -634,11 +627,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testGetFiles() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testGetFiles.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testGetFiles.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
             Set<@NonNull File> expectedFiles = new HashSet<>();
@@ -654,11 +644,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testGetTableNames() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testGetTableNames.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testGetTableNames.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
             Set<@NonNull String> expectedTables = new HashSet<>();
@@ -688,11 +675,8 @@ public class SqLiteCollectionTest {
      */
     @Test(expected = IOException.class)
     public void testReadNonExisting() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testReadNonExisting.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testReadNonExisting.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
             sqLiteDB.getReader("DoesntExist");
@@ -706,11 +690,8 @@ public class SqLiteCollectionTest {
      */
     @Test
     public void testWriteExisting() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testWriteExisting.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testWriteExisting.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
             
@@ -745,11 +726,8 @@ public class SqLiteCollectionTest {
      */
     @Test(expected = IOException.class)
     public void testTableWithNoColumns() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testTableWithNoColumns.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testTableWithNoColumns.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
             
@@ -766,11 +744,8 @@ public class SqLiteCollectionTest {
      */
     @Test(expected = IOException.class)
     public void testMixWriteObjectAndWriteHeader() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testMixWriteObjectAndWriteHeader.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testMixWriteObjectAndWriteHeader.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
             
@@ -788,11 +763,8 @@ public class SqLiteCollectionTest {
      */
     @Test(expected = IOException.class)
     public void testMixWriteHeaderAndWriteObject() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testMixWriteHeaderAndWriteObject.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testMixWriteHeaderAndWriteObject.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
             
@@ -810,11 +782,8 @@ public class SqLiteCollectionTest {
      */
     @Test(expected = IOException.class)
     public void testMixWriteRelationalObjectAndWriteHeader() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testMixWriteRelationalObjectAndWriteHeader.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testMixWriteRelationalObjectAndWriteHeader.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
             
@@ -832,11 +801,8 @@ public class SqLiteCollectionTest {
      */
     @Test(expected = IOException.class)
     public void testMixWriteHeaderAndWriteRelationalObject() throws IOException {
-        // Delete generated file at the beginning of the test to allow debugging of the DB.
-        File tmpFile = new File(AllTests.TESTDATA, "testMixWriteHeaderAndWriteRelationalObject.sqlite");
-        if (tmpFile.exists()) {
-            tmpFile.delete();
-        }
+        File tmpFile = new File(TMP_DIR, "testMixWriteHeaderAndWriteRelationalObject.sqlite");
+        assertThat(tmpFile.exists(), is(false));
         
         try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
             
@@ -846,5 +812,5 @@ public class SqLiteCollectionTest {
             }
         }
     }
-
+    
 }
