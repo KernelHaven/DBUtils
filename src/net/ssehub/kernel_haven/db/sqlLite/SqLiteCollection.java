@@ -27,6 +27,7 @@ import net.ssehub.kernel_haven.util.null_checks.NonNull;
  * {@link ITableCollection} to provide read/write access to a (local) SQLite database.
  * 
  * @author El-Sharkawy
+ * @author Adam
  */
 public class SqLiteCollection extends AbstractSqlTableCollection {
     

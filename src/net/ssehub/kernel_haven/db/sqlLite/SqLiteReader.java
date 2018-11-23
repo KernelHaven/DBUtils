@@ -20,6 +20,7 @@ import net.ssehub.kernel_haven.util.null_checks.Nullable;
 /**
  * Reader for a table from a SQLite database.
  * 
+ * @author Adam
  * @author El-Sharkawy
  */
 public class SqLiteReader implements ITableReader {
