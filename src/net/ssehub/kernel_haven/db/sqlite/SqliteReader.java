@@ -98,32 +98,34 @@ public class SqliteReader implements ITableReader {
         }
         
         header = new  @NonNull String[columns.size()];
-        
-        StringBuffer sql = new StringBuffer()
-                .append("SELECT ")
-                .append(escapeSqlIdentifier(notNull(columns.get(0))));
-        header[0] = notNull(columns.get(0));
-        for (int i = 1; i < columns.size(); i++) {
-            sql
-                .append(", ")
-                .append(escapeSqlIdentifier(columns.get(i)));
-            header[i] = notNull(columns.get(i));
+        int i = 0;
+        StringBuilder columnNamesSql = new StringBuilder();
+        for (String column : columns) {
+            if (i != 0) {
+                columnNamesSql.append(", ");
+            }
+            columnNamesSql.append(escapeSqlIdentifier(column));
+            
+            header[i++] = column;
         }
-        sql.append(" FROM ")
-            .append(escapeSqlIdentifier(tableName));
         
+        String orderBy = "";
         if (hasID) {
-            sql.append(" ORDER BY " + ID_FIELD_ESCAPED);
+            orderBy = "ORDER BY " + ID_FIELD_ESCAPED;
         }
         
-        String sqlSelectQuery = sql.toString();
+        String sql = String.format("SELECT %s FROM %s %s;",
+                columnNamesSql.toString(),
+                escapeSqlIdentifier(tableName),
+                orderBy
+        );
+        
         try {
-            resultSet = notNull(con.prepareStatement(sqlSelectQuery).executeQuery());
+            resultSet = notNull(con.prepareStatement(sql).executeQuery());
             nColumns = columns.size();
             
         } catch (SQLException e) {
-            throw new IOException("Couldn't execute SQL statement \"" + sqlSelectQuery + "\" for: " + getTableName(),
-                    e);
+            throw new IOException("Couldn't execute SQL statement \"" + sql + "\" for: " + getTableName(), e);
         }
     }
     
