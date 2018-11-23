@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -813,4 +814,47 @@ public class SqLiteCollectionTest {
         }
     }
     
+    /**
+     * Tests reading an existing database.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testReadExisting() throws IOException {
+        File file = new File(AllTests.TESTDATA, "existing.sqlite");
+        
+        try (SqLiteCollection sqliteDb = new SqLiteCollection(file)) {
+            
+            assertThat(sqliteDb.getFiles(), is(new HashSet<>(Arrays.asList(file))));
+            assertThat(sqliteDb.getTableNames(), is(new HashSet<>(Arrays.asList("Table No ID", "Table With ID"))));
+            
+            try (ITableReader in = sqliteDb.getReader("Table No ID")) {
+                assertThat(in.readNextRow(), is(new String[] {"Name", "Value"}));
+                assertThat(in.readNextRow(), is(new String[] {"A", "1"}));
+                assertThat(in.readNextRow(), is(new String[] {"B", "2"}));
+                assertThat(in.readNextRow(), is(new String[] {"C", "3"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+            
+            try (ITableReader in = sqliteDb.getReader("Table With ID")) {
+                assertThat(in.readNextRow(), is(new String[] {"Value", "Square"}));
+                assertThat(in.readNextRow(), is(new String[] {"1", "1"}));
+                assertThat(in.readNextRow(), is(new String[] {"2", "4"}));
+                assertThat(in.readNextRow(), is(new String[] {"3", "9"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+        }
+    }
+    
+    /**
+     * Tests reading an existing file that is not a Sqlite DB.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testReadCorrupted() throws IOException {
+        File file = new File(AllTests.TESTDATA, "corrupted.sqlite");
+        new SqLiteCollection(file).close();
+    }
+
 }

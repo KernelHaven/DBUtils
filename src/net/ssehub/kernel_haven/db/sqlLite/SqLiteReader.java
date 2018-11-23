@@ -77,9 +77,8 @@ public class SqLiteReader implements ITableReader {
             ResultSet resultSet = metadata.getColumns(null, null, tableName, null);
             while (resultSet.next()) {
                 String name = resultSet.getString("COLUMN_NAME");
-                String type = resultSet.getString("TYPE_NAME");
     
-                if (!"ID".equals(name) && !"INTEGER".equals(type)) {
+                if (!"ID".equals(name)) {
                     columns.add(name);
                 } else {
                     hasID = true;

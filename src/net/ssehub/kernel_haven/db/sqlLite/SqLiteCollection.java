@@ -65,7 +65,7 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
      */
     private static @NonNull Connection createConnection(@NonNull File dbFile) throws IOException {
         Connection con;
-        String url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
+        String url = "jdbc:sqlite:" + dbFile.getPath();
         try {
             SQLiteConfig config = new SQLiteConfig();
             config.enforceForeignKeys(true);
@@ -73,9 +73,9 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
             config.setEncoding(Encoding.UTF_8);
             
             con = config.createConnection(url);
-            LOGGER.logDebug2("SQLite connection has been established for file: ", dbFile.getAbsolutePath());
+            LOGGER.logDebug2("SQLite connection has been established for file: ", dbFile.getPath());
         } catch (SQLException exc) {
-            throw new IOException("Could not establish connection to: " + dbFile.getAbsolutePath(), exc);
+            throw new IOException("Could not establish connection to: " + dbFile.getPath(), exc);
         }
         
         return con;
