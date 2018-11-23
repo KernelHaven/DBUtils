@@ -1,4 +1,4 @@
 # This file specifies that the KernelHaven infrastructure should load the
 # following classes and execute their static initialize method.
 
-net.ssehub.kernel_haven.db.sqlLite.SqLiteCollection
+net.ssehub.kernel_haven.db.sqlite.SqliteCollection

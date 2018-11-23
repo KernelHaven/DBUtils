@@ -1,8 +1,8 @@
-package net.ssehub.kernel_haven.db.sqlLite;
+package net.ssehub.kernel_haven.db.sqlite;
 
 import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.escapeSqlIdentifier;
-import static net.ssehub.kernel_haven.db.sqlLite.SqLiteCollection.ID_FIELD;
-import static net.ssehub.kernel_haven.db.sqlLite.SqLiteCollection.ID_FIELD_ESCAPED;
+import static net.ssehub.kernel_haven.db.sqlite.SqliteCollection.ID_FIELD;
+import static net.ssehub.kernel_haven.db.sqlite.SqliteCollection.ID_FIELD_ESCAPED;
 import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
 
 import java.io.IOException;
@@ -23,7 +23,7 @@ import net.ssehub.kernel_haven.util.null_checks.Nullable;
  * @author Adam
  * @author El-Sharkawy
  */
-public class SqLiteReader implements ITableReader {
+public class SqliteReader implements ITableReader {
     
     private @NonNull Connection con;
     
@@ -54,7 +54,7 @@ public class SqLiteReader implements ITableReader {
      * @throws IOException If reading the given table fails.
      */
     @SuppressWarnings("null") // resultSet and header are initialized in init()
-    SqLiteReader(@NonNull Connection con, @NonNull String dbName, @NonNull String tableName) throws IOException {
+    SqliteReader(@NonNull Connection con, @NonNull String dbName, @NonNull String tableName) throws IOException {
         this.con = con;
         this.dbName = dbName;
         this.tableName = tableName;
@@ -69,7 +69,7 @@ public class SqLiteReader implements ITableReader {
      * </p>
      * <p>
      * Selects all columns except for an optional ID column. However, if an ID column is present, the data is sorted
-     * by the ID. See {@link SqLiteCollection#ID_FIELD}.
+     * by the ID. See {@link SqliteCollection#ID_FIELD}.
      * </p>
      * 
      * @throws IOException If setting up or executing the SQL query fails.

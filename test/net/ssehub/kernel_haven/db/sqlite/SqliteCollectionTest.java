@@ -1,4 +1,4 @@
-package net.ssehub.kernel_haven.db.sqlLite;
+package net.ssehub.kernel_haven.db.sqlite;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -26,13 +26,13 @@ import net.ssehub.kernel_haven.util.io.TableRow;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;
 
 /**
- * Tests the {@link SqLiteCollection}.
+ * Tests the {@link SqliteCollection}.
  * 
  * @author Adam
  * @author El-Sharkawy
  */
 @SuppressWarnings("null")
-public class SqLiteCollectionTest {
+public class SqliteCollectionTest {
     
     private static final File TMP_DIR = new File(AllTests.TESTDATA, "tmp");
     
@@ -104,8 +104,8 @@ public class SqLiteCollectionTest {
         assertThat(tmpFile.exists(), is(false));
         
         ITableReader reader = null;
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
-            ITableWriter writer = sqLiteDB.getWriter("Test")) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile);
+            ITableWriter writer = sqliteDB.getWriter("Test")) {
             
             TestData elem1 = new TestData("element1", "value1");
             TestData elem2 = new TestData("element2", "value2");
@@ -113,7 +113,7 @@ public class SqLiteCollectionTest {
             writer.writeObject(elem2);
             writer.close();
             
-            reader = sqLiteDB.getReader("Test");
+            reader = sqliteDB.getReader("Test");
             
             assertContent(reader, "Test", elem1, elem2);
             
@@ -140,8 +140,8 @@ public class SqLiteCollectionTest {
         assertThat(tmpFile.exists(), is(false));
         
         ITableReader reader = null;
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
-            ITableWriter writer = sqLiteDB.getWriter("Test")) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile);
+            ITableWriter writer = sqliteDB.getWriter("Test")) {
             
             writer.writeHeader("First Name", "Last Name");
             writer.writeRow("Donald", "Duck");
@@ -150,7 +150,7 @@ public class SqLiteCollectionTest {
             
             writer.close();
             
-            reader = sqLiteDB.getReader("Test");
+            reader = sqliteDB.getReader("Test");
             
             assertThat(reader.getLineNumber(), is(0));
             
@@ -188,8 +188,8 @@ public class SqLiteCollectionTest {
         assertThat(tmpFile.exists(), is(false));
         
         ITableReader reader = null;
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
-            ITableWriter writer = sqLiteDB.getWriter("Test Table")) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile);
+            ITableWriter writer = sqliteDB.getWriter("Test Table")) {
             
             TestData elem1 = new TestData("element1", "value1");
             TestData elem2 = new TestData("element2", "value2");
@@ -197,7 +197,7 @@ public class SqLiteCollectionTest {
             writer.writeObject(elem2);
             writer.close();
             
-            reader = sqLiteDB.getReader("Test Table");
+            reader = sqliteDB.getReader("Test Table");
             
             assertContent(reader, "Test_Table", elem1, elem2);
             
@@ -363,7 +363,7 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testRelationStructure.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
+        try (SqliteCollection collection = new SqliteCollection(tmpFile)) {
             // Write relational data (will create an view)
             try (ITableWriter writer = collection.getWriter("Feature Dependencies")) {
                 writer.writeObject(new RelationData("A", "B"));
@@ -398,7 +398,7 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testRelationStructureWithExtraElement.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
+        try (SqliteCollection collection = new SqliteCollection(tmpFile)) {
             // Write relational data (will create an view)
             try (ITableWriter writer = collection.getWriter("Feature Dependencies")) {
                 writer.writeObject(new RelationDataWithExtraElement("A", "B", "Context 1"));
@@ -446,7 +446,7 @@ public class SqLiteCollectionTest {
         assertThat(tmpFile.exists(), is(false));
         
         // Write data of two analyses into two tables
-        try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
+        try (SqliteCollection collection = new SqliteCollection(tmpFile)) {
             try (ITableWriter writer = collection.getWriter("Features")) {
                 for (TestData tData : firstDataSet) {
                     writer.writeObject(tData);
@@ -460,7 +460,7 @@ public class SqLiteCollectionTest {
         }
         
         // Check if data was written successfully
-        try (SqLiteCollection collection = new SqLiteCollection(tmpFile)) {
+        try (SqliteCollection collection = new SqliteCollection(tmpFile)) {
             try (ITableReader reader = collection.getReader("Features")) {
                 String[][] firstContent = reader.readFull();
                 Assert.assertEquals(4, firstContent.length);
@@ -490,7 +490,7 @@ public class SqLiteCollectionTest {
      */
     @Test(expected = IOException.class)
     public void testWriteBeforeHeader() throws IOException {
-        try (SqLiteCollection db = new SqLiteCollection(new File(TMP_DIR, "testWriteBeforeHeader.sqlite"))) {
+        try (SqliteCollection db = new SqliteCollection(new File(TMP_DIR, "testWriteBeforeHeader.sqlite"))) {
             try (ITableWriter out = db.getWriter("SomeTable")) {
                 out.writeRow("Some", "Row");
             }
@@ -499,7 +499,7 @@ public class SqLiteCollectionTest {
     
     /**
      * Tests that writing and reading <code>null</code> values works as expected with
-     * {@link SqLiteWriter#writeRow(Object...)}.
+     * {@link SqliteWriter#writeRow(Object...)}.
      */
     @Test
     public void testWriteAndReadNullRows() {
@@ -507,8 +507,8 @@ public class SqLiteCollectionTest {
         assertThat(tmpFile.exists(), is(false));
         
         ITableReader reader = null;
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
-            ITableWriter writer = sqLiteDB.getWriter("Test")) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile);
+            ITableWriter writer = sqliteDB.getWriter("Test")) {
             
             writer.writeHeader("First Name", "Last Name");
             writer.writeRow("Donald", "Duck");
@@ -517,7 +517,7 @@ public class SqLiteCollectionTest {
             
             writer.close();
             
-            reader = sqLiteDB.getReader("Test");
+            reader = sqliteDB.getReader("Test");
             
             assertThat(reader.getLineNumber(), is(0));
             
@@ -549,7 +549,7 @@ public class SqLiteCollectionTest {
     
     /**
      * Tests that writing and reading <code>null</code> values works as expected with
-     * {@link SqLiteWriter#writeObject(Object)}.
+     * {@link SqliteWriter#writeObject(Object)}.
      */
     @Test
     public void testWriteAndReadNullObject() {
@@ -557,8 +557,8 @@ public class SqLiteCollectionTest {
         assertThat(tmpFile.exists(), is(false));
         
         ITableReader reader = null;
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile);
-            ITableWriter writer = sqLiteDB.getWriter("Test")) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile);
+            ITableWriter writer = sqliteDB.getWriter("Test")) {
             
             TestData elem1 = new TestData("element1", "value1");
             TestData elem2 = new TestData("element2", null);
@@ -566,7 +566,7 @@ public class SqLiteCollectionTest {
             writer.writeObject(elem2);
             writer.close();
             
-            reader = sqLiteDB.getReader("Test");
+            reader = sqliteDB.getReader("Test");
             
             assertContent(reader, "Test", elem1, elem2);
             
@@ -593,10 +593,10 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testGetFiles.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             Set<@NonNull File> expectedFiles = new HashSet<>();
             expectedFiles.add(tmpFile);
-            assertThat(sqLiteDB.getFiles(), is(expectedFiles));
+            assertThat(sqliteDB.getFiles(), is(expectedFiles));
         }
     }
     
@@ -610,24 +610,24 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testGetTableNames.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             Set<@NonNull String> expectedTables = new HashSet<>();
             
-            assertThat(sqLiteDB.getTableNames(), is(expectedTables));
+            assertThat(sqliteDB.getTableNames(), is(expectedTables));
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table 1")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table 1")) {
                 out.writeHeader("Column 1", "Column 2");
             }
             
             expectedTables.add("Table 1");
-            assertThat(sqLiteDB.getTableNames(), is(expectedTables));
+            assertThat(sqliteDB.getTableNames(), is(expectedTables));
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table 2")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table 2")) {
                 out.writeHeader("Column 1", "Column 2");
             }
             
             expectedTables.add("Table 2");
-            assertThat(sqLiteDB.getTableNames(), is(expectedTables));
+            assertThat(sqliteDB.getTableNames(), is(expectedTables));
         }
     }
     
@@ -641,8 +641,8 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testReadNonExisting.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
-            sqLiteDB.getReader("DoesntExist");
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            sqliteDB.getReader("DoesntExist");
         }
     }
     
@@ -656,25 +656,25 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testWriteExisting.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
                 out.writeHeader("Column A", "Column B");
                 out.writeRow("ABC", "DEF");
             }
             
-            try (ITableReader in = sqLiteDB.getReader("Table")) {
+            try (ITableReader in = sqliteDB.getReader("Table")) {
                 assertThat(in.readNextRow(), is(new String[] {"Column A", "Column B"}));
                 assertThat(in.readNextRow(), is(new String[] {"ABC", "DEF"}));
                 assertThat(in.readNextRow(), nullValue());
             }
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
                 out.writeHeader("Column 1", "Column 2");
                 out.writeRow("Alpha", "Beta");
             }
             
-            try (ITableReader in = sqLiteDB.getReader("Table")) {
+            try (ITableReader in = sqliteDB.getReader("Table")) {
                 assertThat(in.readNextRow(), is(new String[] {"Column 1", "Column 2"}));
                 assertThat(in.readNextRow(), is(new String[] {"Alpha", "Beta"}));
                 assertThat(in.readNextRow(), nullValue());
@@ -692,9 +692,9 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testTableWithNoColumns.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
                 out.writeHeader();
             }
         }
@@ -710,9 +710,9 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testMixWriteObjectAndWriteHeader.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
                 out.writeObject(new TestData("A", "B"));
                 out.writeHeader("Column1", "Column2");
             }
@@ -729,9 +729,9 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testMixWriteHeaderAndWriteObject.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
                 out.writeHeader("Column1", "Column2");
                 out.writeObject(new TestData("A", "B"));
             }
@@ -748,9 +748,9 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testMixWriteRelationalObjectAndWriteHeader.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
                 out.writeObject(new RelationData("A", "B"));
                 out.writeHeader("Column1", "Column2");
             }
@@ -767,9 +767,9 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testMixWriteHeaderAndWriteRelationalObject.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
                 out.writeHeader("Column1", "Column2");
                 out.writeObject(new RelationData("A", "B"));
             }
@@ -786,9 +786,9 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testWriteNullHeader.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
                 out.writeHeader("Column1", null, "Column3");
             }
         }
@@ -804,9 +804,9 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testWriteTooLargeRow.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
                 out.writeHeader("Column1", "Column2", "Column3");
                 out.writeRow("Value1", "Value2", "Value3", "Value4");
             }
@@ -823,9 +823,9 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testWriteTooSmallRow.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             
-            try (ITableWriter out = sqLiteDB.getWriter("Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
                 out.writeHeader("Column1", "Column2", "Column3");
                 out.writeRow("Value1", "Value2");
             }
@@ -842,18 +842,18 @@ public class SqLiteCollectionTest {
         File tmpFile = new File(TMP_DIR, "testNamesWithQuotationMark.sqlite");
         assertThat(tmpFile.exists(), is(false));
         
-        try (ITableCollection sqLiteDB = new SqLiteCollection(tmpFile)) {
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
             
-            assertThat(sqLiteDB.getTableNames(), is(new HashSet<>()));
+            assertThat(sqliteDB.getTableNames(), is(new HashSet<>()));
             
-            try (ITableWriter out = sqLiteDB.getWriter("Some\"Table")) {
+            try (ITableWriter out = sqliteDB.getWriter("Some\"Table")) {
                 out.writeHeader("Column\"A", "Column\"B");
                 out.writeRow("A\"B", "C\"D");
             }
             
-            assertThat(sqLiteDB.getTableNames(), is(new HashSet<>(Arrays.asList("Some\"Table"))));
+            assertThat(sqliteDB.getTableNames(), is(new HashSet<>(Arrays.asList("Some\"Table"))));
             
-            try (ITableReader in = sqLiteDB.getReader("Some\"Table")) {
+            try (ITableReader in = sqliteDB.getReader("Some\"Table")) {
                 assertThat(in.readNextRow(), is(new String[] {"Column\"A", "Column\"B"}));
                 assertThat(in.readNextRow(), is(new String[] {"A\"B", "C\"D"}));
                 assertThat(in.readNextRow(), nullValue());
@@ -870,7 +870,7 @@ public class SqLiteCollectionTest {
     public void testReadExisting() throws IOException {
         File file = new File(AllTests.TESTDATA, "existing.sqlite");
         
-        try (SqLiteCollection sqliteDb = new SqLiteCollection(file)) {
+        try (SqliteCollection sqliteDb = new SqliteCollection(file)) {
             
             assertThat(sqliteDb.getFiles(), is(new HashSet<>(Arrays.asList(file))));
             assertThat(sqliteDb.getTableNames(), is(new HashSet<>(Arrays.asList("Table No ID", "Table With ID"))));
@@ -901,7 +901,7 @@ public class SqLiteCollectionTest {
     @Test(expected = IOException.class)
     public void testReadCorrupted() throws IOException {
         File file = new File(AllTests.TESTDATA, "corrupted.sqlite");
-        new SqLiteCollection(file).close();
+        new SqliteCollection(file).close();
     }
 
 }

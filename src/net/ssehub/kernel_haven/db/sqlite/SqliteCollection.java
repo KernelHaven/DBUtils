@@ -1,4 +1,4 @@
-package net.ssehub.kernel_haven.db.sqlLite;
+package net.ssehub.kernel_haven.db.sqlite;
 
 import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
 
@@ -29,16 +29,16 @@ import net.ssehub.kernel_haven.util.null_checks.NonNull;
  * @author El-Sharkawy
  * @author Adam
  */
-public class SqLiteCollection extends AbstractSqlTableCollection {
+public class SqliteCollection extends AbstractSqlTableCollection {
     
     static {
         // this static block is invoked by the infrastructure, see loadClasses.txt
         
         // register to TableCollectionReaderFactory
-        TableCollectionReaderFactory.INSTANCE.registerHandler("sqlite", SqLiteCollection.class);
+        TableCollectionReaderFactory.INSTANCE.registerHandler("sqlite", SqliteCollection.class);
         
         // register to TableCollectionWriterFactory
-        TableCollectionWriterFactory.INSTANCE.registerHandler("sqlite", SqLiteCollection.class);
+        TableCollectionWriterFactory.INSTANCE.registerHandler("sqlite", SqliteCollection.class);
     }
     
     static final @NonNull String ID_FIELD = "ID";
@@ -56,7 +56,7 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
      * 
      * @throws IOException If the given database file could not be opened.
      */
-    public SqLiteCollection(@NonNull File dbFile) throws IOException {
+    public SqliteCollection(@NonNull File dbFile) throws IOException {
         super(createConnection(dbFile));
         this.dbFile = dbFile;
     }
@@ -91,13 +91,13 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
     @Override
     public @NonNull ITableReader getReader(@NonNull String name) throws IOException {
         Connection con = createConnection(dbFile);
-        return new SqLiteReader(con, getDbName(), name);
+        return new SqliteReader(con, getDbName(), name);
     }
 
     @Override
     public @NonNull ITableWriter getWriter(@NonNull String name) throws IOException {
         Connection con = createConnection(dbFile);
-        return new SqLiteWriter(con, getDbName(), name);
+        return new SqliteWriter(con, getDbName(), name);
     }
 
     @Override

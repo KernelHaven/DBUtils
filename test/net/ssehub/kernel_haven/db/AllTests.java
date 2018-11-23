@@ -6,7 +6,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
-import net.ssehub.kernel_haven.db.sqlLite.SqLiteCollectionTest;
+import net.ssehub.kernel_haven.db.sqlite.SqliteCollectionTest;
 
 /**
  * Test suite for this package and sub packages.
@@ -15,7 +15,7 @@ import net.ssehub.kernel_haven.db.sqlLite.SqLiteCollectionTest;
  */
 @RunWith(Suite.class)
 @SuiteClasses({
-    SqLiteCollectionTest.class
+    SqliteCollectionTest.class
     })
 public class AllTests {
     

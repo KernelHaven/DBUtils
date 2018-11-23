@@ -1,7 +1,7 @@
-package net.ssehub.kernel_haven.db.sqlLite;
+package net.ssehub.kernel_haven.db.sqlite;
 
 import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.escapeSqlIdentifier;
-import static net.ssehub.kernel_haven.db.sqlLite.SqLiteCollection.ID_FIELD_ESCAPED;
+import static net.ssehub.kernel_haven.db.sqlite.SqliteCollection.ID_FIELD_ESCAPED;
 import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
 
 import java.io.IOException;
@@ -20,7 +20,7 @@ import net.ssehub.kernel_haven.util.null_checks.Nullable;
  * @author Adam
  * @author El-Sharkawy
  */
-public class SqLiteWriter extends AbstractTableWriter {
+public class SqliteWriter extends AbstractTableWriter {
     
     private @NonNull Connection con;
     private @NonNull String dbName;
@@ -41,7 +41,7 @@ public class SqLiteWriter extends AbstractTableWriter {
      * @param dbName The name of the database (used in log messages only).
      * @param tableName The name of the table to be created inside the database.
      */
-    SqLiteWriter(@NonNull Connection con, @NonNull String dbName, @NonNull String tableName) {
+    SqliteWriter(@NonNull Connection con, @NonNull String dbName, @NonNull String tableName) {
         this.con = con;
         this.dbName = dbName;
         this.tableName = tableName;
