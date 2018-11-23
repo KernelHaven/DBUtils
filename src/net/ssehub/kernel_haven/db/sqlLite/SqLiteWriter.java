@@ -224,37 +224,33 @@ public class SqLiteWriter extends AbstractTableWriter {
         String escapedFirstHeader = sqlifyIdentifier(tableName, headers[0].toString()); 
         String escapedSecondHeader = sqlifyIdentifier(tableName, headers[1].toString()); 
         
-        // As we join two times the same table, we have to rename columns (and can't join in one step)
-        // Inner select statement
-        String innerSelect = String.format(
-                "SELECT %1$s AS %2$s, %3$s %4$s FROM %5$s JOIN %6$s ON %5$s.%2$s = %6$s.%7$s",
-                
-                /*1$*/ columnName,
-                /*2$*/ escapedFirstHeader,
-                /*3$*/ escapedSecondHeader,
-                /*4$*/ optionalColumns,
-                /*5$*/ sqlifyIdentifier(tableName, null),
-                /*6$*/ elementTableName,
-                /*7$*/ ID_FIELD_ESCAPED
-        );
+        /*
+         * Join twice with the element table, using two temporary names
+         * The first join is used to resolve the first foreign key reference
+         * The second join is used to resolve the second foreign key reference
+         */
+        String tmp1 = escapeSqlIdentifier("tmp_join1");
+        String tmp2 = escapeSqlIdentifier("tmp_join2");
         
-        // Outer select statement
-        String outerSelect = String.format(
-                "SELECT %1$s, %2$s AS %3$s %4$s FROM (%5$s) AS %8$s JOIN %6$s ON %8$s.%3$s = %6$s.%7$s",
+        String select = String.format(
+                "SELECT %1$s.%3$s AS %4$s, %2$s.%3$s AS %5$s %6$s FROM %7$s"
+                + " INNER JOIN %8$s AS %1$s ON %7$s.%4$s = %1$s.%9$s"
+                + " INNER JOIN %8$s AS %2$s ON %7$s.%5$s = %2$s.%9$s;",
                 
-                /*1$*/ escapedFirstHeader,
-                /*2$*/ columnName,
-                /*3$*/ escapedSecondHeader,
-                /*4$*/ optionalColumns,
-                /*5$*/ innerSelect,
-                /*6$*/ elementTableName,
-                /*7$*/ ID_FIELD_ESCAPED,
-                /*8$*/ escapeSqlIdentifier("inner_join")
+                /*1$*/ tmp1,
+                /*2$*/ tmp2,
+                /*3$*/ columnName,
+                /*4$*/ escapedFirstHeader,
+                /*5$*/ escapedSecondHeader,
+                /*6$*/ optionalColumns,
+                /*7$*/ sqlifyIdentifier(tableName, null),
+                /*8$*/ elementTableName,
+                /*9$*/ ID_FIELD_ESCAPED
         );
         
         String sqlCreateView = String.format("CREATE VIEW IF NOT EXISTS %s AS %s;",
                 sqlifyIdentifier(tableName + " View", null),
-                outerSelect);
+                select);
         
         try {
             con.prepareStatement(sqlCreateView).execute();
