@@ -208,7 +208,9 @@ public class SqLiteWriter extends AbstractTableWriter {
      * @param headers A at least 2-dim array containing the names of the relationships.
      * @throws IOException If the view could not be created.
      */
-    private void createView(String elementTableName, String columnName, Object[] headers) throws IOException {
+    private void createView(@NonNull String elementTableName, @NonNull String columnName,
+            @NonNull Object @NonNull [] headers) throws IOException {
+        
         // Handling of optional, non-relational elements starting at 3rd index of header
         StringBuffer optionalColumns = null;
         if (headers.length > 2) {
@@ -283,7 +285,9 @@ public class SqLiteWriter extends AbstractTableWriter {
      * @param headers A at least 2-dim array containing the names of the relationships.
      * @throws IOException If the table could not be created.
      */
-    private void createRelationTable(String elementTableName, Object[] headers) throws IOException {
+    private void createRelationTable(@NonNull String elementTableName, @NonNull Object @NonNull [] headers)
+            throws IOException {
+        
         StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
         sqlCreate.append(sqlifyIdentifier(tableName, null));
         sqlCreate.append(" (");
@@ -328,7 +332,7 @@ public class SqLiteWriter extends AbstractTableWriter {
      * @return The column name of the primary key elements.
      * @throws IOException If the table could not be created.
      */
-    private String createElementsTable(String elementTableName) throws IOException {
+    private @NonNull String createElementsTable(@NonNull String elementTableName) throws IOException {
         StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
         sqlCreate.append(elementTableName);
         sqlCreate.append(" (");
