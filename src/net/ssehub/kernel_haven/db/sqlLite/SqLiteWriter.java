@@ -1,6 +1,7 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
 import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.sqlifyIdentifier;
+import static net.ssehub.kernel_haven.db.sqlLite.SqLiteCollection.ID_FIELD_ESCAPED;
 import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
 
 import java.io.IOException;
@@ -70,7 +71,7 @@ public class SqLiteWriter extends AbstractTableWriter {
         StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
         sqlCreate.append(sqlifyIdentifier(tableName, null));
         sqlCreate.append(" (");
-        sqlCreate.append("ID INTEGER PRIMARY KEY");
+        sqlCreate.append(ID_FIELD_ESCAPED).append(" INTEGER PRIMARY KEY");
         
         StringBuffer sqlInsert = new StringBuffer("INSERT INTO ");
         sqlInsert.append(sqlifyIdentifier(tableName, null));
@@ -175,13 +176,13 @@ public class SqLiteWriter extends AbstractTableWriter {
         sqlInsert2.append(sqlifyIdentifier(tableName, null));
         sqlInsert2.append(" VALUES (");
         
-        sqlInsert2.append("(SELECT ID FROM ");
+        sqlInsert2.append("(SELECT ").append(ID_FIELD_ESCAPED).append(" FROM ");
         sqlInsert2.append(elementTableName);
         sqlInsert2.append(" WHERE ");
         sqlInsert2.append(columnName);
         sqlInsert2.append(" = ?), ");
         
-        sqlInsert2.append("(SELECT ID FROM ");
+        sqlInsert2.append("(SELECT ").append(ID_FIELD_ESCAPED).append(" FROM ");
         sqlInsert2.append(elementTableName);
         sqlInsert2.append(" WHERE ");
         sqlInsert2.append(columnName);
@@ -243,7 +244,7 @@ public class SqLiteWriter extends AbstractTableWriter {
         innerSelect.append(sqlifyIdentifier(tableName, headers[0].toString()));
         innerSelect.append(" = ");
         innerSelect.append(elementTableName);
-        innerSelect.append(".ID");
+        innerSelect.append(".").append(ID_FIELD_ESCAPED);
         
         // Outer select statement
         StringBuffer outerSelect = new StringBuffer("SELECT ");
@@ -264,7 +265,7 @@ public class SqLiteWriter extends AbstractTableWriter {
         outerSelect.append(sqlifyIdentifier(tableName, headers[1].toString()));
         outerSelect.append(" = ");
         outerSelect.append(elementTableName);
-        outerSelect.append(".ID");
+        outerSelect.append(".").append(ID_FIELD_ESCAPED);
         
         StringBuffer sqlCreateView = new StringBuffer("CREATE VIEW IF NOT EXISTS ");
         sqlCreateView.append(sqlifyIdentifier(tableName + " View", null));
@@ -308,13 +309,13 @@ public class SqLiteWriter extends AbstractTableWriter {
         sqlCreate.append(sqlifyIdentifier(tableName, headers[0].toString()));
         sqlCreate.append(") REFERENCES ");
         sqlCreate.append(elementTableName);
-        sqlCreate.append(" (ID),");
+        sqlCreate.append(" (").append(ID_FIELD_ESCAPED).append("),");
         
         sqlCreate.append(" FOREIGN KEY(");
         sqlCreate.append(sqlifyIdentifier(tableName, headers[1].toString()));
         sqlCreate.append(") REFERENCES ");
         sqlCreate.append(elementTableName);
-        sqlCreate.append(" (ID)");
+        sqlCreate.append(" (").append(ID_FIELD_ESCAPED).append(")");
         
         sqlCreate.append(");");
         
@@ -336,7 +337,7 @@ public class SqLiteWriter extends AbstractTableWriter {
         StringBuffer sqlCreate = new StringBuffer("CREATE TABLE ");
         sqlCreate.append(elementTableName);
         sqlCreate.append(" (");
-        sqlCreate.append("ID INTEGER PRIMARY KEY");
+        sqlCreate.append(ID_FIELD_ESCAPED).append(" INTEGER PRIMARY KEY");
         
         sqlCreate.append(", ");
         String columnName = sqlifyIdentifier(tableName, "Element");

@@ -40,6 +40,10 @@ public class SqLiteCollection extends AbstractSqlTableCollection {
         TableCollectionWriterFactory.INSTANCE.registerHandler("sqlite", SqLiteCollection.class);
     }
     
+    static final @NonNull String ID_FIELD = "ID";
+    
+    static final @NonNull String ID_FIELD_ESCAPED = escapeSqlIdentifier(ID_FIELD);
+    
     private static final @NonNull Logger LOGGER = Logger.get();
     
     private @NonNull File dbFile;

@@ -1,6 +1,8 @@
 package net.ssehub.kernel_haven.db.sqlLite;
 
 import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.escapeSqlIdentifier;
+import static net.ssehub.kernel_haven.db.sqlLite.SqLiteCollection.ID_FIELD;
+import static net.ssehub.kernel_haven.db.sqlLite.SqLiteCollection.ID_FIELD_ESCAPED;
 import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
 
 import java.io.IOException;
@@ -66,7 +68,7 @@ public class SqLiteReader implements ITableReader {
      * </p>
      * <p>
      * Selects all columns except for an optional ID column. However, if an ID column is present, the data is sorted
-     * by the ID.
+     * by the ID. See {@link SqLiteCollection#ID_FIELD}.
      * </p>
      * 
      * @throws IOException If setting up or executing the SQL query fails.
@@ -80,7 +82,7 @@ public class SqLiteReader implements ITableReader {
             while (resultSet.next()) {
                 String name = resultSet.getString("COLUMN_NAME");
     
-                if (!"ID".equals(name)) {
+                if (!ID_FIELD.equals(name)) {
                     columns.add(name);
                 } else {
                     hasID = true;
@@ -108,7 +110,7 @@ public class SqLiteReader implements ITableReader {
         sql.append(escapeSqlIdentifier(tableName));
         
         if (hasID) {
-            sql.append(" ORDER BY ID");
+            sql.append(" ORDER BY " + ID_FIELD_ESCAPED);
         }
         
         String sqlSelectQuery = sql.toString();
