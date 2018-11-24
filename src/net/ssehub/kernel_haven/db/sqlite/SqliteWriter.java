@@ -307,7 +307,7 @@ public class SqliteWriter extends AbstractTableWriter {
             @NonNull Object @NonNull [] headers) throws IOException {
         
         // Handling of optional, non-relational elements starting at 3rd index of header
-        StringBuffer optionalColumns = new StringBuffer();
+        StringBuilder optionalColumns = new StringBuilder();
         if (headers.length > 2) {
             for (int i = 2; i < headers.length; i++) {
                 optionalColumns
