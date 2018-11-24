@@ -7,7 +7,6 @@ import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
 
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -30,6 +29,8 @@ public class SqliteReader implements ITableReader {
     private @NonNull String dbName;
     
     private @NonNull String tableName;
+    
+    private @NonNull String escapedTableName;
     
     private @NonNull ResultSet resultSet;
     
@@ -58,6 +59,7 @@ public class SqliteReader implements ITableReader {
         this.con = con;
         this.dbName = dbName;
         this.tableName = tableName;
+        this.escapedTableName = escapeSqlIdentifier(tableName);
         
         init();
     }
@@ -78,10 +80,16 @@ public class SqliteReader implements ITableReader {
         List<@NonNull String> columns = new ArrayList<>();
         boolean hasID = false;
         try {
-            DatabaseMetaData metadata = con.getMetaData();
-            ResultSet resultSet = metadata.getColumns(null, null, tableName, null);
+            // the sqlite-jdbc implementation of con.getMetaData().getColumns() is bugged, since it's not possible
+            // to escape % and _
+            // thus we execute an SQLite-specific PRAGMA to get the column names
+            
+            String columnNameSql = String.format("PRAGMA table_info(%s);",
+                    escapedTableName);
+            
+            ResultSet resultSet = con.prepareStatement(columnNameSql).executeQuery();
             while (resultSet.next()) {
-                String name = notNull(resultSet.getString("COLUMN_NAME"));
+                String name = notNull(resultSet.getString("name"));
     
                 if (!ID_FIELD.equals(name)) {
                     columns.add(name);
@@ -90,7 +98,7 @@ public class SqliteReader implements ITableReader {
                 }
             }
         } catch (SQLException exc) {
-            throw new IOException("Could determine columns for: " + getTableName(), exc);
+            throw new IOException("Couldn't determine columns for: " + getTableName(), exc);
         }
         
         if (columns.isEmpty()) {
@@ -116,7 +124,7 @@ public class SqliteReader implements ITableReader {
         
         String sql = String.format("SELECT %s FROM %s %s;",
                 columnNamesSql.toString(),
-                escapeSqlIdentifier(tableName),
+                escapedTableName,
                 orderBy
         );
         

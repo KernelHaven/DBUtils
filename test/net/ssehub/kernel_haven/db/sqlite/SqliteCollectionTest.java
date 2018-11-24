@@ -888,6 +888,43 @@ public class SqliteCollectionTest {
     }
     
     /**
+     * Tests that reading a table name with a percent sign (%) correctly works. This may be an issue, since the % is
+     * a special character for querying the column names.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testTableNameWithPercent() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testTableNameWithPercent.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            assertThat(sqliteDB.getTableNames(), is(new HashSet<>()));
+            
+            try (ITableWriter out = sqliteDB.getWriter("Some%Table")) {
+                out.writeHeader("Column A", "Column B");
+                out.writeRow("A", "B");
+            }
+            
+            // create another table that the search query "Some%Table" would match
+            try (ITableWriter out = sqliteDB.getWriter("Some Other Table")) {
+                out.writeHeader("Column 1", "Column 2");
+                out.writeRow("1", "2");
+            }
+            
+            assertThat(sqliteDB.getTableNames(), is(new HashSet<>(Arrays.asList("Some%Table", "Some Other Table"))));
+            
+            // check that reading "Some%Table" does not match "Some Other Table"
+            try (ITableReader in = sqliteDB.getReader("Some%Table")) {
+                assertThat(in.readNextRow(), is(new String[] {"Column A", "Column B"}));
+                assertThat(in.readNextRow(), is(new String[] {"A", "B"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+        }
+    }
+    
+    /**
      * Tests that creating a new table with two identical column names correctly throws an exception.
      * 
      * @throws IOException wanted.
