@@ -1200,7 +1200,7 @@ public class SqliteCollectionTest {
     }
     
     /**
-     * Tests reading an existing file that is not a Sqlite DB.
+     * Tests reading an existing file that is not a SQLite DB.
      * 
      * @throws IOException wanted.
      */
@@ -1208,6 +1208,51 @@ public class SqliteCollectionTest {
     public void testReadCorrupted() throws IOException {
         File file = new File(AllTests.TESTDATA, "corrupted.sqlite");
         new SqliteCollection(file).close();
+    }
+    
+    /**
+     * Tests that writing to an "old" writer, that has already been overwritten by a new writer, throws an exception.
+     * 
+     * This is not an important test, but it increases test coverage for very weird corner cases.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testChangeSchemaDuringWrite() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testChangeSchemaDuringWrite.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            ITableWriter writer1 = sqliteDB.getWriter("Table");
+            writer1.writeHeader("Column 1", "Column 2");
+            writer1.writeRow("A", "B");
+            
+            // now create a new writer, which drops the old table and creates a new one
+            ITableWriter writer2 = sqliteDB.getWriter("Table");
+            writer2.writeHeader("Column 1", "Column 2", "Column 3");
+            writer2.writeRow("A", "B", "C");
+            
+            // "re-use" old writer
+            try {
+                writer1.writeRow("C", "D");
+                fail("Expected exception");
+            } catch (IOException e) {
+            }
+            
+            
+            // continue with new writer
+            writer2.writeRow("D", "E", "F");
+            writer2.close();
+            writer1.close();
+
+            // check that all writer2 data arrived
+            try (ITableReader in = sqliteDB.getReader("Table")) {
+                assertThat(in.readNextRow(), is(new String[] {"Column 1", "Column 2", "Column 3"}));
+                assertThat(in.readNextRow(), is(new String[] {"A", "B", "C"}));
+                assertThat(in.readNextRow(), is(new String[] {"D", "E", "F"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+        }
     }
 
 }
