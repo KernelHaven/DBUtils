@@ -17,8 +17,6 @@ import net.ssehub.kernel_haven.config.Configuration;
 import net.ssehub.kernel_haven.db.AbstractSqlTableCollection;
 import net.ssehub.kernel_haven.util.Logger;
 import net.ssehub.kernel_haven.util.io.ITableCollection;
-import net.ssehub.kernel_haven.util.io.ITableReader;
-import net.ssehub.kernel_haven.util.io.ITableWriter;
 import net.ssehub.kernel_haven.util.io.TableCollectionReaderFactory;
 import net.ssehub.kernel_haven.util.io.TableCollectionWriterFactory;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;
@@ -89,13 +87,13 @@ public class SqliteCollection extends AbstractSqlTableCollection {
     }
     
     @Override
-    public @NonNull ITableReader getReader(@NonNull String name) throws IOException {
+    public @NonNull SqliteReader getReader(@NonNull String name) throws IOException {
         Connection con = createConnection(dbFile);
         return new SqliteReader(con, getDbName(), name);
     }
 
     @Override
-    public @NonNull ITableWriter getWriter(@NonNull String name) throws IOException {
+    public @NonNull SqliteWriter getWriter(@NonNull String name) throws IOException {
         Connection con = createConnection(dbFile);
         return new SqliteWriter(con, getDbName(), name);
     }
