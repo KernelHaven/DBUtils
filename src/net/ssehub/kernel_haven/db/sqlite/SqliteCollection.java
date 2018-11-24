@@ -15,7 +15,6 @@ import org.sqlite.SQLiteConfig.SynchronousMode;
 
 import net.ssehub.kernel_haven.config.Configuration;
 import net.ssehub.kernel_haven.db.AbstractSqlTableCollection;
-import net.ssehub.kernel_haven.util.Logger;
 import net.ssehub.kernel_haven.util.io.ITableCollection;
 import net.ssehub.kernel_haven.util.io.TableCollectionReaderFactory;
 import net.ssehub.kernel_haven.util.io.TableCollectionWriterFactory;
@@ -43,8 +42,6 @@ public class SqliteCollection extends AbstractSqlTableCollection {
     
     static final @NonNull String ID_FIELD_ESCAPED = escapeSqlIdentifier(ID_FIELD);
     
-    private static final @NonNull Logger LOGGER = Logger.get();
-    
     private @NonNull File dbFile;
     
     /**
@@ -71,6 +68,7 @@ public class SqliteCollection extends AbstractSqlTableCollection {
     private static @NonNull Connection createConnection(@NonNull File dbFile) throws IOException {
         Connection con;
         String url = "jdbc:sqlite:" + dbFile.getPath();
+        
         try {
             SQLiteConfig config = new SQLiteConfig();
             config.enforceForeignKeys(true);
@@ -78,7 +76,7 @@ public class SqliteCollection extends AbstractSqlTableCollection {
             config.setEncoding(Encoding.UTF_8);
             
             con = notNull(config.createConnection(url));
-            LOGGER.logDebug2("SQLite connection has been established for file: ", dbFile.getPath());
+            
         } catch (SQLException exc) {
             throw new IOException("Could not establish connection to: " + dbFile.getPath(), exc);
         }
