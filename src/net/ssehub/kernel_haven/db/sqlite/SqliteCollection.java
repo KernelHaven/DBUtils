@@ -87,7 +87,18 @@ public class SqliteCollection extends AbstractSqlTableCollection {
     @Override
     public @NonNull SqliteReader getReader(@NonNull String name) throws IOException {
         Connection con = createConnection(dbFile);
-        return new SqliteReader(con, getDbName(), name);
+        try {
+            return new SqliteReader(con, getDbName(), name);
+            
+        } catch (IOException e) {
+            // make sure that the new connection is closed if we were not able to create the reader
+            try {
+                con.close();
+            } catch (SQLException e1) {
+                // ignore and only throw previous error
+            }
+            throw e;
+        }
     }
 
     @Override
