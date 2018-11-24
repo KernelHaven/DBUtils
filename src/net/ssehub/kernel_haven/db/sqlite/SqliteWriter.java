@@ -343,7 +343,7 @@ public class SqliteWriter extends AbstractTableWriter {
                 /*9$*/ ID_FIELD_ESCAPED
         );
         
-        String sqlCreateView = String.format("CREATE VIEW IF NOT EXISTS %s AS %s;",
+        String sqlCreateView = String.format("CREATE VIEW %s AS %s;",
                 escapeSqlIdentifier(tableName + " View"),
                 select);
         
@@ -375,7 +375,13 @@ public class SqliteWriter extends AbstractTableWriter {
             
             String[] strings = new String[values.length];
             for (int i = 0; i < values.length; i++) {
-                strings[i] = values[i] != null ? values[i].toString() : null;
+                if (values[i] != null) {
+                    strings[i] = values[i].toString();
+                } else if (i >= 2) {
+                    strings[i] = "";
+                } else {
+                    throw new IOException("Can't use null as relation key in " + getTableName());
+                }
             }
             
             sqlInsertStatement1.setString(1, strings[0]);

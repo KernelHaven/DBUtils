@@ -584,6 +584,32 @@ public class SqliteCollectionTest {
     }
     
     /**
+     * Tests that writing and reading <code>null</code> values works as expected with
+     * {@link SqliteWriter#writeObject(Object)} and relational objects.
+     */
+    @Test
+    public void testWriteAndReadNullRelation() {
+        File tmpFile = new File(TMP_DIR, "testWriteAndReadNullRelation.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile);
+            ITableWriter writer = sqliteDB.getWriter("Test")) {
+            
+            writer.writeObject(new RelationDataWithExtraElement("A", "B", null));
+            writer.close();
+            
+            try (ITableReader reader = sqliteDB.getReader("Test View")) {
+                assertThat(reader.readNextRow(), is(new String[] {"Feature", "Depends On", "Context"}));
+                assertThat(reader.readNextRow(), is(new String[] {"A", "B", ""}));
+                assertThat(reader.readNextRow(), nullValue());
+                
+            }
+        } catch (IOException exc) {
+            Assert.fail(exc.toString());
+        }
+    }
+    
+    /**
      * Tests the getFiles() method.
      * 
      * @throws IOException unwanted.
@@ -898,6 +924,133 @@ public class SqliteCollectionTest {
     }
     
     /**
+     * Tests that creating a new table which collides with the "tmp_join1" helper identifier still works correctly.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testCreateDuplicateTmpJoin1() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testCreateDuplicateTmpJoin1.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqliteDB.getWriter("tmp_join1")) {
+                out.writeObject(new RelationDataWithExtraElement("A", "B", "X1"));
+                out.writeObject(new RelationDataWithExtraElement("A", "C", "X2"));
+            }
+            
+            try (ITableReader in = sqliteDB.getReader("tmp_join1 View")) {
+                assertThat(in.readNextRow(), is(new String[] {"Feature", "Depends On", "Context"}));
+                assertThat(in.readNextRow(), is(new String[] {"A", "B", "X1"}));
+                assertThat(in.readNextRow(), is(new String[] {"A", "C", "X2"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+        }
+    }
+    
+    /**
+     * Tests that creating a new table which collides with the "tmp_join2" helper identifier still works correctly.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testCreateDuplicateTmpJoin2() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testCreateDuplicateTmpJoin2.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqliteDB.getWriter("tmp_join2")) {
+                out.writeObject(new RelationDataWithExtraElement("A", "B", "X1"));
+                out.writeObject(new RelationDataWithExtraElement("A", "C", "X2"));
+            }
+            
+            try (ITableReader in = sqliteDB.getReader("tmp_join2 View")) {
+                assertThat(in.readNextRow(), is(new String[] {"Feature", "Depends On", "Context"}));
+                assertThat(in.readNextRow(), is(new String[] {"A", "B", "X1"}));
+                assertThat(in.readNextRow(), is(new String[] {"A", "C", "X2"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+        }
+    }
+    
+    /**
+     * Tests that creating relational tables where the elements table collides with a previously created one throws
+     * and exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testCreateDuplicateElementsTable() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testCreateDuplicateElementsTable.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            // create the colliding table
+            try (ITableWriter out = sqliteDB.getWriter("Table Elements")) {
+                out.writeHeader("Some", "Wrong", "Schema");
+            }
+            
+            // create the relational tables
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
+                out.writeObject(new RelationData("A", "B"));
+            }
+        }
+    }
+    
+    /**
+     * Tests that creating relational tables where the relation table collides with a previously created one throws
+     * and exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testCreateDuplicateRelationTable() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testCreateDuplicateRelationTable.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            // create the colliding table
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
+                out.writeHeader("Some", "Wrong", "Schema");
+            }
+            
+            // create the relational tables
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
+                out.writeObject(new RelationData("A", "B"));
+            }
+        }
+    }
+    
+    /**
+     * Tests that creating relational tables where the view table collides with a previously created one throws
+     * and exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testCreateDuplicateViewTable() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testCreateDuplicateViewTable.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            // create the colliding table
+            try (ITableWriter out = sqliteDB.getWriter("Table View")) {
+                out.writeHeader("Some", "Wrong", "Schema");
+            }
+            
+            // create the relational tables
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
+                out.writeObject(new RelationData("A", "B"));
+            }
+        }
+    }
+    
+    /**
      * Tests that creating a new table with an invalid table name throws an exception.
      * 
      * @throws IOException wanted.
@@ -911,6 +1064,105 @@ public class SqliteCollectionTest {
             
             try (ITableWriter out = sqliteDB.getWriter("sqlite_some_invalid_table_name")) {
                 out.writeHeader("Column1", "Column2");
+            }
+        }
+    }
+    
+    /**
+     * Tests that creating a new table with an invalid table name throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testInvalidTableNameRelation() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testInvalidTableNameObject.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqliteDB.getWriter("sqlite_some_invalid_table_name")) {
+                out.writeObject(new RelationData("A", "B"));
+            }
+        }
+    }
+    
+    /**
+     * Tests that writing after calling close() correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testWriteAfterClose() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testWriteAfterClose.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            ITableWriter out = sqliteDB.getWriter("table");
+            out.writeHeader("Column1", "Column2");
+            out.writeRow("A", "B");
+            
+            out.close();
+            
+            out.writeRow("C", "D");
+        }
+    }
+    
+    /**
+     * Tests that writing after calling close() correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testWriteRelationAfterClose() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testWriteRelationAfterClose.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            ITableWriter out = sqliteDB.getWriter("table");
+            out.writeObject(new RelationData("A", "B"));
+            out.writeObject(new RelationData("C", "D"));
+            
+            out.close();
+            
+            out.writeObject(new RelationData("E", "F"));
+        }
+    }
+    
+    /**
+     * Tests that writing a wrong relation object correctly throws an exception.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void testWrongRelationObject() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testWrongRelationObject.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
+                out.writeObject(new RelationData("A", "B"));
+                out.writeObject(new RelationDataWithExtraElement("A", "B", "C"));
+            }
+        }
+    }
+    
+    /**
+     * Tests writing a relation object that has a null element as key.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testRelationKeyNull() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testRelationKeyNull.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
+                out.writeObject(new RelationData("A", null));
             }
         }
     }
