@@ -47,7 +47,7 @@ public abstract class AbstractSqlTableCollection implements ITableCollection {
             DatabaseMetaData md = con.getMetaData();
             ResultSet rs = md.getTables(null, null, "%", null);
             while (rs.next()) {
-                tables.add(notNull(rs.getString(3)));
+                tables.add(notNull(rs.getString("TABLE_NAME")));
             }
         } catch (SQLException exc) {
             throw new IOException("Could not determine tables names for: " + getDbName(), exc);
