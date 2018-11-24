@@ -709,6 +709,42 @@ public class SqliteCollectionTest {
     }
     
     /**
+     * Tests that trying to create a writer for an existing table (with different case) correctly overwrites the table.
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testWriteExistingDifferentCase() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testWriteExistingDifferentCase.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
+                out.writeHeader("Column A", "Column B");
+                out.writeRow("ABC", "DEF");
+            }
+            
+            try (ITableReader in = sqliteDB.getReader("Table")) {
+                assertThat(in.readNextRow(), is(new String[] {"Column A", "Column B"}));
+                assertThat(in.readNextRow(), is(new String[] {"ABC", "DEF"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+            
+            try (ITableWriter out = sqliteDB.getWriter("tABLe")) {
+                out.writeHeader("Column 1", "Column 2");
+                out.writeRow("Alpha", "Beta");
+            }
+            
+            try (ITableReader in = sqliteDB.getReader("table")) {
+                assertThat(in.readNextRow(), is(new String[] {"Column 1", "Column 2"}));
+                assertThat(in.readNextRow(), is(new String[] {"Alpha", "Beta"}));
+                assertThat(in.readNextRow(), nullValue());
+            }
+        }
+    }
+    
+    /**
      * Tests that creating a table with no columns correctly throws an exception.
      * 
      * @throws IOException wanted.
