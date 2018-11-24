@@ -54,20 +54,20 @@ public class SqliteWriter extends AbstractTableWriter {
         try {
             con.close();
         } catch (SQLException exc) {
-            throw new IOException("Could not close connection for: " + getTableName(), exc);
+            throw new IOException("Could not close connection for " + getTableName(), exc);
         }
     }
     
     @Override
     public void writeHeader(@Nullable Object /*@NonNull*/ ... fields) throws IOException {
         if (sqlInsertStatement1 != null || sqlInsertStatement2 != null) {
-            throw new IOException("Can't mix writeObject() and writeHeader()");
+            throw new IOException("Can't mix writeObject() and writeHeader() for " + getTableName());
         }
         if (sqlInsertStatement != null) {
-            throw new IOException("Can't call writeHeader() twice");
+            throw new IOException("Can't call writeHeader() twice for " + getTableName());
         }
         if (fields.length < 1) {
-            throw new IOException("Can't create a table with no columns");
+            throw new IOException("Can't create a table " + getTableName() + " with no columns");
         }
 
         StringBuilder headersString = new StringBuilder();
@@ -75,7 +75,7 @@ public class SqliteWriter extends AbstractTableWriter {
         for (int i = 0; i < fields.length; i++) {
             Object header = fields[i];
             if (header == null) {
-                throw new IOException("Table header null is not allowed");
+                throw new IOException("Table header null is not allowed for " + getTableName());
             }
             
             headersString.append(String.format(", %s TEXT",
@@ -98,48 +98,53 @@ public class SqliteWriter extends AbstractTableWriter {
         
         try {
             con.prepareStatement(sqlDrop).execute();
+        } catch (SQLException exc) {
+            throw new IOException("Could not drop existing table " + getTableName() + ": " + sqlDrop, exc);
+        }
+        try {
             con.prepareStatement(sqlCreate).execute();
         } catch (SQLException exc) {
-            throw new IOException("Could not create table", exc);
+            throw new IOException("Could not create table " + getTableName() + ": " + sqlCreate, exc);
         }
          
         try {
             sqlInsertStatement = con.prepareStatement(sqlInsert);
             sqlInsertQuery = sqlInsert;
         } catch (SQLException exc) {
-            throw new IOException("Could not prepare SQL insert query", exc);
+            throw new IOException("Could not prepare SQL insert query for " + getTableName() + ": " + sqlInsert, exc);
         }
     }
     
     @Override
     public void writeRow(@Nullable Object /*@NonNull*/ ... columns) throws IOException {
         if (sqlInsertStatement == null) {
-            throw new IOException("writeHeader() must be called before writeRow()");
+            throw new IOException("writeHeader() must be called before writeRow() for " + getTableName());
         }
         
         try {
             int expectedParamCount = sqlInsertStatement.getParameterMetaData().getParameterCount();
             if (columns.length != expectedParamCount) {
-                throw new IOException("Expected " + expectedParamCount + " elements, but got " + columns.length);
+                throw new IOException("Expected " + expectedParamCount + " elements, but got " + columns.length
+                        + " for " + getTableName());
             }
         } catch (SQLException e) {
-            throw new IOException("Can't check insert statement", e);
+            throw new IOException("Can't check insert statement for " + getTableName(), e);
         }
         
         for (int i = 0; i < columns.length; i++) {
+            String value = columns[i] != null ? notNull(columns[i]).toString() : null;
             try {
-                String value = columns[i] != null ? notNull(columns[i]).toString() : null;
                 sqlInsertStatement.setString((i + 1), value);
             } catch (SQLException e) {
-                throw new IOException("Could not prepare statement " + i + " in " + sqlInsertQuery
-                    + " with values: " + columns.toString() + " for: " + getTableName());
+                throw new IOException("Could not set parameter " + i + " to value " +  value + " for "
+                        + getTableName() + " (query: " + sqlInsertQuery + ")", e);
             }
         }
         
         try {
             sqlInsertStatement.execute();
         } catch (SQLException e) {
-            throw new IOException("Could not execute query \"" + sqlInsertQuery + "\" for: " + getTableName());
+            throw new IOException("Could not execute insert query for " + getTableName() + ": " + sqlInsertQuery, e);
         }
     }
 
@@ -166,7 +171,7 @@ public class SqliteWriter extends AbstractTableWriter {
         }
         
         if (sqlInsertStatement != null) {
-            throw new IOException("Can't mix writeHeader() and writeObject()");
+            throw new IOException("Can't mix writeHeader() and writeObject() for " + getTableName());
         }
         
         // special handling for relations
@@ -204,9 +209,13 @@ public class SqliteWriter extends AbstractTableWriter {
         
         try {
             sqlInsertStatement1 = con.prepareStatement(sqlInsert1);
-            sqlInsertStatement2 = con.prepareStatement(sqlInsert2.toString());
         } catch (SQLException exc) {
-            throw new IOException("Could not prepare insert statements", exc);
+            throw new IOException("Could not prepare insert statement for " + getTableName() + ": " + sqlInsert1, exc);
+        }
+        try {
+            sqlInsertStatement2 = con.prepareStatement(sqlInsert2);
+        } catch (SQLException exc) {
+            throw new IOException("Could not prepare insert statement for " + getTableName() + ": " + sqlInsert2, exc);
         }
     }
     
@@ -234,7 +243,7 @@ public class SqliteWriter extends AbstractTableWriter {
         try {
             con.prepareStatement(sqlCreate).execute();
         } catch (SQLException exc) {
-            throw new IOException("Could not create element table", exc);
+            throw new IOException("Could not create element table for " + getTableName() + ": " + sqlCreate, exc);
         }
         
         return columnName;
@@ -278,7 +287,7 @@ public class SqliteWriter extends AbstractTableWriter {
         try {
             con.prepareStatement(sqlCreate).execute();
         } catch (SQLException exc) {
-            throw new IOException("Could not create relation table", exc);
+            throw new IOException("Could not create relation table for " + getTableName() + ": " + sqlCreate, exc);
         }
     }
 
@@ -341,7 +350,7 @@ public class SqliteWriter extends AbstractTableWriter {
         try {
             con.prepareStatement(sqlCreateView).execute();
         } catch (SQLException exc) {
-            throw new IOException("Could not create view", exc);
+            throw new IOException("Could not create view for " + getTableName() + ": " + sqlCreateView, exc);
         }
     }
 
@@ -380,9 +389,9 @@ public class SqliteWriter extends AbstractTableWriter {
             sqlInsertStatement2.execute();
             
         } catch (ReflectiveOperationException e) {
-            throw new IOException(e);
+            throw new IOException("Can't read field values", e);
         } catch (SQLException e) {
-            throw new IOException(e);
+            throw new IOException("Couldn't execute insert statement for " + getTableName(), e);
         }
     }
 

@@ -125,7 +125,7 @@ public class SqliteReader implements ITableReader {
             nColumns = columns.size();
             
         } catch (SQLException e) {
-            throw new IOException("Couldn't execute SQL statement \"" + sql + "\" for: " + getTableName(), e);
+            throw new IOException("Couldn't execute SQL query for " + getTableName() + ": " + sql, e);
         }
     }
     
@@ -134,7 +134,7 @@ public class SqliteReader implements ITableReader {
         try {
             con.close();
         } catch (SQLException exc) {
-            throw new IOException("Could not close connection for: " + getTableName(), exc);
+            throw new IOException("Could not close connection for " + getTableName(), exc);
         }
     }
 
