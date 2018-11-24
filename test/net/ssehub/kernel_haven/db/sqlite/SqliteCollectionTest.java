@@ -862,6 +862,60 @@ public class SqliteCollectionTest {
     }
     
     /**
+     * Tests that creating a new table with two identical column names correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testCreateDuplicateHeader() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testCreateDuplicateHeader.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
+                out.writeHeader("Column1", "Column1");
+            }
+        }
+    }
+    
+    /**
+     * Tests that creating a new table with another "ID" column correctly throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testCreateDuplicateIdHeader() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testCreateDuplicateIdHeader.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqliteDB.getWriter("Table")) {
+                out.writeHeader("Column1", "ID");
+            }
+        }
+    }
+    
+    /**
+     * Tests that creating a new table with an invalid table name throws an exception.
+     * 
+     * @throws IOException wanted.
+     */
+    @Test(expected = IOException.class)
+    public void testInvalidTableName() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testInvalidTableName.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            try (ITableWriter out = sqliteDB.getWriter("sqlite_some_invalid_table_name")) {
+                out.writeHeader("Column1", "Column2");
+            }
+        }
+    }
+    
+    /**
      * Tests reading an existing database.
      * 
      * @throws IOException unwanted.
