@@ -19,3 +19,11 @@ This plugin has no additional dependencies other than KernelHaven.
 ## License
 
 This plugin is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.html).
+
+## Used Libraries
+
+The following libraries are used (and bundled in `lib/`) by this plugin:
+
+| Library | Version | License |
+|---------|---------|---------|
+| [SQLite JDBC](https://github.com/xerial/sqlite-jdbc) | [3.23.1](https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.23.1.jar) | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.html) |
