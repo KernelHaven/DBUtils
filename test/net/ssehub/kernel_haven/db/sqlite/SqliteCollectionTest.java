@@ -9,9 +9,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -1324,6 +1327,59 @@ public class SqliteCollectionTest {
                 assertThat(in.readNextRow(), is(new String[] {"A", "B", "C"}));
                 assertThat(in.readNextRow(), is(new String[] {"D", "E", "F"}));
                 assertThat(in.readNextRow(), nullValue());
+            }
+        }
+    }
+    
+    /**
+     * Tests writing to the same database with multiple threads. This test case aims to provoke an SQLITE_BUSY error
+     * in one thread. This should be caught by us setting a proper PRAGMA busy_timeout;
+     * 
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testMultithreadedWrite() throws IOException {
+        File tmpFile = new File(TMP_DIR, "testMultithreadedWrite.sqlite");
+        assertThat(tmpFile.exists(), is(false));
+        
+        try (SqliteCollection sqliteDB = new SqliteCollection(tmpFile)) {
+            
+            Deque<@NonNull IOException> exceptions = new ConcurrentLinkedDeque<>();
+            List<@NonNull Thread> threads = new LinkedList<>();
+            
+            // spawn 8 threads, each trying to write a table with 400 rows
+            // this seems to reliably produce SQLITE_BUSY errors when PRAGMA busy_timeout is not set
+            for (int i = 0; i < 8; i++) {
+                int num = i;
+                threads.add(new Thread(() -> {
+                    
+                    int j = 0;
+                    try (ITableWriter writer = sqliteDB.getWriter("Thread" + num)) {
+                        writer.writeHeader("Column 1", "Column 2");
+                        
+                        for (j = 1; j < 400 && exceptions.isEmpty(); j++) {
+                            writer.writeRow("A", "B");
+                        }
+                    } catch (IOException e) {
+                        exceptions.add(e);
+                    }
+                }));
+            }
+            
+            for (Thread th : threads) {
+                th.start();
+            }
+            
+            try {
+                for (Thread th : threads) {
+                    th.join();
+                }
+            } catch (InterruptedException e) {
+                fail(e.getMessage());
+            }
+            
+            if (!exceptions.isEmpty()) {
+                throw exceptions.poll();
             }
         }
     }

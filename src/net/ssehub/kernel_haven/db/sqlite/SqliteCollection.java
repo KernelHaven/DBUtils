@@ -74,6 +74,10 @@ public class SqliteCollection extends AbstractSqlTableCollection {
             config.enforceForeignKeys(true);
             config.setSynchronous(SynchronousMode.OFF);
             config.setEncoding(Encoding.UTF_8);
+            // set PRAGMA busy_timeout = 30000;
+            // this will cause one thread to wait at least 30 seconds before returning SQLITE_BUSY when another
+            // thread is currently writing to the database
+            config.setBusyTimeout("30000");
             
             con = notNull(config.createConnection(url));
             
