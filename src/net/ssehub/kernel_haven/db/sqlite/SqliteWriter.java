@@ -86,7 +86,7 @@ public class SqliteWriter extends AbstractTableWriter {
         String sqlDrop = String.format("DROP TABLE IF EXISTS %s;",
                 escapedTableName);
         
-        String sqlCreate = String.format("CREATE TABLE %s (%s INTEGER PRIMAR KEY %s);",
+        String sqlCreate = String.format("CREATE TABLE %s (%s INTEGER PRIMARY KEY %s);",
                 escapedTableName,
                 ID_FIELD_ESCAPED,
                 headersString.toString());
