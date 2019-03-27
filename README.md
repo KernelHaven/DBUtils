@@ -1,6 +1,6 @@
 # DBUtils
 
-![Build Status](https://jenkins.sse.uni-hildesheim.de/buildStatus/icon?job=KernelHaven_DBUtils)
+![Build Status](https://jenkins-2.sse.uni-hildesheim.de/buildStatus/icon?job=KH_DBUtils)
 
 A utility plugin for [KernelHaven](https://github.com/KernelHaven/KernelHaven).
 
@@ -8,7 +8,7 @@ Utilities for reading an writing tables in [SQLite databases](https://sqlite.org
 
 ## Usage
 
-Place [`DBUtils.jar`](https://jenkins.sse.uni-hildesheim.de/view/KernelHaven/job/KernelHaven_DBUtils/lastSuccessfulBuild/artifact/build/jar/DBUtils.jar) in the plugins folder of KernelHaven.
+Place [`DBUtils.jar`](https://jenkins-2.sse.uni-hildesheim.de/view/KernelHaven/job/KH_DBUtils/lastSuccessfulBuild/artifact/build/jar/DBUtils.jar) in the plugins folder of KernelHaven.
 
 This plugin will automatically register the utility classes so that SQLite databases (`*.sqlite`) are supported in all places where previously only CSV was.
 
