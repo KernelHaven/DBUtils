@@ -16,8 +16,6 @@
 package net.ssehub.kernel_haven.db.sqlite;
 
 import static net.ssehub.kernel_haven.db.AbstractSqlTableCollection.escapeSqlIdentifier;
-import static net.ssehub.kernel_haven.db.sqlite.SqliteCollection.ID_FIELD;
-import static net.ssehub.kernel_haven.db.sqlite.SqliteCollection.ID_FIELD_ESCAPED;
 import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
 
 import java.io.IOException;
@@ -84,16 +82,11 @@ public class SqliteReader implements ITableReader {
      * Initializes the reading. Loads column information and fires the query (sets {@link #resultSet} and
      * {@link #nColumns}).
      * </p>
-     * <p>
-     * Prepares and executes a SELECT statements, that selects all columns except for an optional ID column. However,
-     * if an ID column is present, the data is sorted by the ID. See {@link SqliteCollection#ID_FIELD}.
-     * </p>
      * 
      * @throws IOException If setting up or executing the SQL query fails.
      */
     private void init() throws IOException {
         List<@NonNull String> columns = new ArrayList<>();
-        boolean hasID = false;
         try {
             // the sqlite-jdbc implementation of con.getMetaData().getColumns() is bugged, since it's not possible
             // to escape % and _
@@ -105,12 +98,7 @@ public class SqliteReader implements ITableReader {
             ResultSet resultSet = con.prepareStatement(columnNameSql).executeQuery();
             while (resultSet.next()) {
                 String name = notNull(resultSet.getString("name"));
-    
-                if (!ID_FIELD.equals(name)) {
-                    columns.add(name);
-                } else {
-                    hasID = true;
-                }
+                columns.add(name);
             }
         } catch (SQLException exc) {
             throw new IOException("Couldn't determine columns for: " + getTableName(), exc);
@@ -132,15 +120,9 @@ public class SqliteReader implements ITableReader {
             header[i++] = column;
         }
         
-        String orderBy = "";
-        if (hasID) {
-            orderBy = "ORDER BY " + ID_FIELD_ESCAPED;
-        }
-        
-        String sql = String.format("SELECT %s FROM %s %s;",
+        String sql = String.format("SELECT %s FROM %s ORDER BY \"_rowid_\";",
                 columnNamesSql.toString(),
-                escapedTableName,
-                orderBy
+                escapedTableName
         );
         
         try {

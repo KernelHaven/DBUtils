@@ -93,21 +93,25 @@ public class SqliteWriter extends AbstractTableWriter {
                 throw new IOException("Table header null is not allowed for " + getTableName());
             }
             
-            headersString.append(String.format(", %s TEXT",
+            if (i != 0) {
+                insertQuestionMarks.append(", ");
+                headersString.append(", ");
+            }
+            
+            headersString.append(String.format("%s TEXT",
                     escapeSqlIdentifier(notNull(header.toString()))));
-            insertQuestionMarks.append(", ?");
+            insertQuestionMarks.append('?');
         }
         
         String sqlDrop = String.format("DROP TABLE IF EXISTS %s;",
                 escapedTableName);
         
-        String sqlCreate = String.format("CREATE TABLE %s (%s INTEGER PRIMARY KEY %s);",
+        String sqlCreate = String.format("CREATE TABLE %s (%s);",
                 escapedTableName,
-                ID_FIELD_ESCAPED,
                 headersString.toString());
         
         // use NULL for primary key, so it is auto-incremented
-        String sqlInsert = String.format("INSERT INTO %s VALUES (NULL %s);",
+        String sqlInsert = String.format("INSERT INTO %s VALUES (%s);",
                 escapedTableName,
                 insertQuestionMarks);
         

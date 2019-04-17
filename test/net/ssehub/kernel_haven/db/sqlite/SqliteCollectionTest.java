@@ -997,24 +997,6 @@ public class SqliteCollectionTest {
     }
     
     /**
-     * Tests that creating a new table with another "ID" column correctly throws an exception.
-     * 
-     * @throws IOException wanted.
-     */
-    @Test(expected = IOException.class)
-    public void testCreateDuplicateIdHeader() throws IOException {
-        File tmpFile = new File(TMP_DIR, "testCreateDuplicateIdHeader.sqlite");
-        assertThat(tmpFile.exists(), is(false));
-        
-        try (ITableCollection sqliteDB = new SqliteCollection(tmpFile)) {
-            
-            try (ITableWriter out = sqliteDB.getWriter("Table")) {
-                out.writeHeader("Column1", "ID");
-            }
-        }
-    }
-    
-    /**
      * Tests that creating a new table which collides with the "tmp_join1" helper identifier still works correctly.
      * 
      * @throws IOException unwanted.
@@ -1281,10 +1263,10 @@ public class SqliteCollectionTest {
             }
             
             try (ITableReader in = sqliteDb.getReader("Table With ID")) {
-                assertThat(in.readNextRow(), is(new String[] {"Value", "Square"}));
-                assertThat(in.readNextRow(), is(new String[] {"1", "1"}));
-                assertThat(in.readNextRow(), is(new String[] {"2", "4"}));
-                assertThat(in.readNextRow(), is(new String[] {"3", "9"}));
+                assertThat(in.readNextRow(), is(new String[] {"ID", "Value", "Square"}));
+                assertThat(in.readNextRow(), is(new String[] {"1", "1", "1"}));
+                assertThat(in.readNextRow(), is(new String[] {"2", "2", "4"}));
+                assertThat(in.readNextRow(), is(new String[] {"3", "3", "9"}));
                 assertThat(in.readNextRow(), nullValue());
             }
         }
