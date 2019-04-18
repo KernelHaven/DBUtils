@@ -26,4 +26,4 @@ The following libraries are used (and bundled in `lib/`) by this plugin:
 
 | Library | Version | License |
 |---------|---------|---------|
-| [SQLite JDBC](https://github.com/xerial/sqlite-jdbc) | [3.23.1](https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.23.1.jar) | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.html) |
+| [SQLite JDBC](https://github.com/xerial/sqlite-jdbc) | [3.27.2.1](https://bitbucket.org/xerial/sqlite-jdbc/downloads/sqlite-jdbc-3.27.2.1.jar) | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.html) |
