@@ -78,10 +78,8 @@ public class SqliteReader implements ITableReader {
     }
     
     /**
-     * <p>
      * Initializes the reading. Loads column information and fires the query (sets {@link #resultSet} and
      * {@link #nColumns}).
-     * </p>
      * 
      * @throws IOException If setting up or executing the SQL query fails.
      */
