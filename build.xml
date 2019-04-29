@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- author: Sascha El-Sharkawy -->
+<!-- Author: Adam, Sascha El-Sharkawy -->
 <project name="DBUtils" default="jenkins" basedir=".">
 	<description>Utilities for reading and writing SQL tables</description>
 
